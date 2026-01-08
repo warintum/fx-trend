@@ -7,9 +7,10 @@ import {
     Timeframe,
 } from './types';
 import { getMultiTimeframeData } from './services/itickApi';
-import { analyzeMarket } from './services/geminiApi';
-import { analyzeMarketWithDeepSeek } from './services/deepseekApi';
-import { analyzeMarketWithGroq } from './services/groqApi';
+import { analyzeMarket as analyzeGemini } from './services/geminiApi';
+import { analyzeMarketWithDeepSeek as analyzeDeepSeek } from './services/deepseekApi';
+import { analyzeMarketWithGroq as analyzeGroq } from './services/groqApi';
+import { sanitizeAnalysisResult } from './utils/analysisFixer';
 import { formatPrice } from './utils/formatters';
 import './index.css';
 
@@ -21,12 +22,12 @@ type TimeframeData = {
 };
 
 // Mock ticker data
-const TICKER_DATA = [
+/*const TICKER_DATA = [
     { icon: '💱', name: 'EUR/USD', price: '1.16837', change: '-0.00 (-0.04%)', isPositive: false },
     { icon: '📊', name: 'DXY Index', price: '98.595', change: '-0.237 (-0.24%)', isPositive: false },
     { icon: '🪙', name: 'Gold', price: '4,471.155', change: '-23.48 (-0.52%)', isPositive: false },
     { icon: '💹', name: 'BTC', price: '92,721', change: '-989.00', isPositive: false },
-];
+];*/
 
 function App() {
     // State
@@ -271,13 +272,15 @@ function App() {
             // Then analyze using selected provider with trade duration
             let result;
             if (aiProvider === 'gemini') {
-                result = await analyzeMarket(geminiApiKey, selectedSymbol, data, tradeDuration);
+                result = await analyzeGemini(geminiApiKey, selectedSymbol, data, tradeDuration);
             } else if (aiProvider === 'deepseek') {
-                result = await analyzeMarketWithDeepSeek(deepseekApiKey, selectedSymbol, data, tradeDuration);
+                result = await analyzeDeepSeek(deepseekApiKey, selectedSymbol, data, tradeDuration);
             } else {
-                result = await analyzeMarketWithGroq(groqApiKeys[selectedGroqIndex], selectedSymbol, data, tradeDuration);
+                result = await analyzeGroq(groqApiKeys[selectedGroqIndex], selectedSymbol, data, tradeDuration);
             }
-            setAnalysisResult(result);
+            // Sanitize the result to fix fused numbers or other AI quirks
+            const sanitizedResult = sanitizeAnalysisResult(result);
+            setAnalysisResult(sanitizedResult);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
         } finally {
@@ -771,6 +774,8 @@ function App() {
                     <a href="https://itick.org" target="_blank" rel="noopener noreferrer">iTick API</a>
                     {' + '}
                     <a href="https://ai.google.dev" target="_blank" rel="noopener noreferrer">Gemini AI</a>
+                    {' + '}
+                    <a href="https://console.groq.com" target="_blank" rel="noopener noreferrer">Groq AI</a>
                     {' • '}© 2026 FX Trend Analyzer • Not financial advice
                 </p>
             </footer>
