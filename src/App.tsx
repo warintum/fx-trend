@@ -496,100 +496,116 @@ function App() {
                         ) : (
                             <div className="analysis-section">
                                 {/* 1. AI Analysis Section (Top) */}
-                                <div className="ai-analysis-box">
-                                    <div className="ai-analysis-header">
-                                        <span>🤖 เหตุผลประกอบ (AI)</span>
-                                        <span className={`analysis-badge ${analysisResult.trend.toLowerCase()}`}>
-                                            {analysisResult.trend}
-                                        </span>
+                                <div className="ai-analysis-box-premium">
+                                    <div className="ai-analysis-header-premium">
+                                        <span className="ai-robot-icon">🤖</span>
+                                        <span className="ai-title-premium">เหตุผลประกอบ (AI)</span>
                                     </div>
-                                    <div className="ai-analysis-content">
-                                        <p>{analysisResult.signal.reasoning}</p>
+                                    <div className="ai-analysis-content-premium">
+                                        <p>
+                                            {analysisResult.signal.reasoning
+                                                .split(/(\d+[\)\.]) /g)
+                                                .map((part, i) => {
+                                                    if (part.match(/^\d+[\)\.]$/)) {
+                                                        return (
+                                                            <span key={i} className="ai-number-highlight">
+                                                                {i > 0 ? '\n' : ''}{part}{' '}
+                                                            </span>
+                                                        );
+                                                    }
+                                                    return <span key={i}>{part}</span>;
+                                                })}
+                                        </p>
                                     </div>
                                 </div>
 
-                                {/* 2. Header with COPY button */}
-                                <div className="result-header-row">
-                                    <div className="signal-header">
-                                        <span className="signal-title">📊 ผลลัพธ์การวิเคราะห์</span>
-                                        <button className="copy-btn" onClick={handleCopySignal}>
-                                            📋 COPY
+                                {/* 2. Result Header with COPY button */}
+                                <div className="result-header-row-premium">
+                                    <div className="signal-header-premium">
+                                        <div className="signal-title-group">
+                                            <span className="signal-bars-icon">📊</span>
+                                            <span className="signal-title-premium">ผลลัพธ์การวิเคราะห์</span>
+                                        </div>
+                                        <button className="copy-btn-premium" onClick={handleCopySignal}>
+                                            <span className="copy-icon">📄</span> COPY
                                         </button>
                                     </div>
                                 </div>
 
-                                {/* 3. Main Signal Box & Confidence */}
-                                <div className="main-signal-container">
-                                    <div className={`main-signal-box ${analysisResult.signal.type.toLowerCase()}`}>
+                                {/* 3. Main Action Box & Confidence Card */}
+                                <div className="signal-action-row">
+                                    <div className={`signal-action-box ${analysisResult.signal.type.toLowerCase()}`}>
                                         {analysisResult.signal.type === 'WAIT'
                                             ? 'ไม่แนะนำให้เข้าตรงนี้'
                                             : analysisResult.signal.type === 'BUY'
                                                 ? '🟢 BUY - แนะนำซื้อ'
                                                 : '🔴 SELL - แนะนำขาย'}
                                     </div>
-                                    <div className="confidence-box">
-                                        <span className="confidence-label">CONFIDENCE</span>
-                                        <span className={`confidence-value ${analysisResult.signal.confidence >= 70 ? 'high' : analysisResult.signal.confidence >= 50 ? 'medium' : 'low'}`}>
-                                            {analysisResult.signal.confidence}%
+                                    <div className="confidence-card-premium">
+                                        <div className="confidence-label-premium">CONFIDENCE</div>
+                                        <div className="confidence-value-premium">{analysisResult.signal.confidence}%</div>
+                                    </div>
+                                </div>
+
+                                {/* 4. AI Volume Check Row */}
+                                <div className="volume-check-row">
+                                    <span className="volume-check-label">AI VOLUME CHECK</span>
+                                    <span className="volume-check-status analyzing">Analyzing...</span>
+                                </div>
+
+                                {/* 5. Recommendation Card (Neon Purple) */}
+                                <div className="feature-card-premium neon-purple">
+                                    <div className="card-label-premium purple">โซนแนะนำ / รอเข้า</div>
+                                    <div className="card-content-premium">
+                                        <span className="card-value-premium">
+                                            {analysisResult.signal.type === 'WAIT'
+                                                ? `Wait ${analysisResult.trend === 'BULLISH' ? 'BUY' : 'SELL'} Limit at ${formatPrice(analysisResult.signal.entryPrice)}`
+                                                : `${analysisResult.signal.type} at ${formatPrice(analysisResult.signal.entryPrice)}`}
                                         </span>
+                                        <span className="card-icon-premium">🗺️</span>
                                     </div>
                                 </div>
 
-                                {/* 4. AI Volume Check Status */}
-                                <div className="ai-status-row">
-                                    <span>AI VOLUME CHECK</span>
-                                    <span className={`ai-status ${analyzing ? 'analyzing' : 'done'}`}>
-                                        {analyzing ? 'Analyzing...' : 'Analyzing...'}
-                                    </span>
-                                </div>
-
-                                {/* 5. Zone Recommendation */}
-                                <div className="zone-recommendation">
-                                    <div className="zone-rec-header">
-                                        <span className="zone-rec-label">โซนแนะนำ / รอเข้า</span>
-                                    </div>
-                                    <div className={`zone-rec-content ${analysisResult.signal.type.toLowerCase()}`}>
-                                        {analysisResult.signal.type === 'WAIT'
-                                            ? `Wait ${analysisResult.trend === 'BULLISH' ? 'BUY' : 'SELL'} Limit at ${formatPrice(analysisResult.signal.entryPrice)}`
-                                            : `${analysisResult.signal.type} at ${formatPrice(analysisResult.signal.entryPrice)}`}
-                                        <span className="zone-rec-icon">�</span>
+                                {/* 6. Entry Card (Neon Blue) */}
+                                <div className="feature-card-premium neon-blue">
+                                    <div className="card-label-premium blue">จุดเข้าปัจจุบัน</div>
+                                    <div className="card-content-premium">
+                                        <span className="card-value-large-premium">
+                                            {formatPrice(analysisResult.currentPrice || analysisResult.signal.entryPrice)}
+                                        </span>
+                                        <span className="card-icon-premium highlight">🎯</span>
                                     </div>
                                 </div>
 
-                                {/* 6. Current Price */}
-                                <div className="current-price-box">
-                                    <span className="current-price-label">จุดเข้าปัจจุบัน</span>
-                                    <div className="current-price-row">
-                                        <span className="current-price-value">{formatPrice(analysisResult.currentPrice || analysisResult.signal.entryPrice)}</span>
-                                        <span className="current-price-icon">⊕</span>
+                                {/* 7. SL/TP Grid (Neon Red/Green) */}
+                                <div className="sltp-grid-premium">
+                                    <div className="feature-card-premium neon-red">
+                                        <div className="card-label-premium red">จุดตัดขาดทุน (SL)</div>
+                                        <div className="card-value-medium-premium white">
+                                            {formatPrice(analysisResult.signal.stopLoss)}
+                                        </div>
+                                    </div>
+                                    <div className="feature-card-premium neon-green">
+                                        <div className="card-label-premium green">จุดทำกำไร (TP)</div>
+                                        <div className="card-value-medium-premium white">
+                                            {formatPrice(analysisResult.signal.takeProfit)}
+                                        </div>
                                     </div>
                                 </div>
 
-                                {/* 7. SL/TP Grid */}
-                                <div className="sltp-grid-new">
-                                    <div className="sltp-box-new sl">
-                                        <div className="sltp-label-new">จุดตัดขาดทุน (SL)</div>
-                                        <div className="sltp-value-new">{formatPrice(analysisResult.signal.stopLoss)}</div>
-                                    </div>
-                                    <div className="sltp-box-new tp">
-                                        <div className="sltp-label-new">จุดทำกำไร (TP)</div>
-                                        <div className="sltp-value-new">{formatPrice(analysisResult.signal.takeProfit)}</div>
-                                    </div>
-                                </div>
-
-                                {/* 8. Demand/Supply Zones */}
-                                <div className="zones-grid-new">
-                                    <div className="zone-box-new">
-                                        <div className="zone-header-new buy">โซนรอ BUY (Demand)</div>
-                                        <div className="zone-value-new">
+                                {/* 8. Demand/Supply Grid */}
+                                <div className="zones-grid-premium">
+                                    <div className="zone-box-dark">
+                                        <div className="zone-label-dark">โซนรอ BUY (Demand)</div>
+                                        <div className="zone-value-dark green">
                                             {analysisResult.keyLevels.support.length > 0
                                                 ? `${formatPrice(analysisResult.keyLevels.support[0])}-${formatPrice(analysisResult.keyLevels.support[1] || analysisResult.keyLevels.support[0])}`
                                                 : '-'}
                                         </div>
                                     </div>
-                                    <div className="zone-box-new">
-                                        <div className="zone-header-new sell">โซนรอ SELL (Supply)</div>
-                                        <div className="zone-value-new">
+                                    <div className="zone-box-dark">
+                                        <div className="zone-label-dark">โซนรอ SELL (Supply)</div>
+                                        <div className="zone-value-dark red">
                                             {analysisResult.keyLevels.resistance.length > 0
                                                 ? `${formatPrice(analysisResult.keyLevels.resistance[0])}-${formatPrice(analysisResult.keyLevels.resistance[1] || analysisResult.keyLevels.resistance[0])}`
                                                 : '-'}
