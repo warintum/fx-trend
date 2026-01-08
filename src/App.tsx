@@ -36,8 +36,22 @@ function App() {
     const [deepseekApiKey, setDeepseekApiKey] = useState(() =>
         localStorage.getItem('deepseek_api_key') || ''
     );
-    const [groqApiKey, setGroqApiKey] = useState(() =>
-        localStorage.getItem('groq_api_key') || ''
+    const [groqApiKeys, setGroqApiKeys] = useState<string[]>(() => {
+        const saved = localStorage.getItem('groq_api_keys');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                if (Array.isArray(parsed) && parsed.length === 5) return parsed;
+            } catch (e) {
+                console.error('Error parsing groq_api_keys', e);
+            }
+        }
+        // Migration from old single key
+        const oldKey = localStorage.getItem('groq_api_key') || '';
+        return [oldKey, '', '', '', ''];
+    });
+    const [selectedGroqIndex, setSelectedGroqIndex] = useState(() =>
+        parseInt(localStorage.getItem('selected_groq_index') || '0')
     );
     const [aiProvider, setAiProvider] = useState<'gemini' | 'deepseek' | 'groq'>(() =>
         (localStorage.getItem('ai_provider') as 'gemini' | 'deepseek' | 'groq') || 'gemini'
@@ -111,8 +125,12 @@ function App() {
     }, [deepseekApiKey]);
 
     useEffect(() => {
-        localStorage.setItem('groq_api_key', groqApiKey);
-    }, [groqApiKey]);
+        localStorage.setItem('groq_api_keys', JSON.stringify(groqApiKeys));
+    }, [groqApiKeys]);
+
+    useEffect(() => {
+        localStorage.setItem('selected_groq_index', selectedGroqIndex.toString());
+    }, [selectedGroqIndex]);
 
     useEffect(() => {
         localStorage.setItem('ai_provider', aiProvider);
@@ -227,6 +245,7 @@ function App() {
 
     // Fetch data and analyze
     const handleAnalyze = async () => {
+        const groqApiKey = groqApiKeys[selectedGroqIndex];
         const currentApiKey = aiProvider === 'gemini' ? geminiApiKey : aiProvider === 'deepseek' ? deepseekApiKey : groqApiKey;
         const providerName = aiProvider === 'gemini' ? 'Gemini' : aiProvider === 'deepseek' ? 'DeepSeek' : 'Groq';
 
@@ -256,7 +275,7 @@ function App() {
             } else if (aiProvider === 'deepseek') {
                 result = await analyzeMarketWithDeepSeek(deepseekApiKey, selectedSymbol, data, tradeDuration);
             } else {
-                result = await analyzeMarketWithGroq(groqApiKey, selectedSymbol, data, tradeDuration);
+                result = await analyzeMarketWithGroq(groqApiKeys[selectedGroqIndex], selectedSymbol, data, tradeDuration);
             }
             setAnalysisResult(result);
         } catch (err) {
@@ -355,28 +374,60 @@ function App() {
                         </div>
 
                         {/* AI Provider Toggle */}
-                        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
-                            <span style={{ fontSize: '0.75rem', color: '#a0a0a8' }}>AI Provider:</span>
-                            <div className="lang-toggle">
-                                <button
-                                    className={`lang-btn ${aiProvider === 'gemini' ? 'active' : ''}`}
-                                    onClick={() => setAiProvider('gemini')}
-                                >
-                                    🔮 Gemini
-                                </button>
-                                <button
-                                    className={`lang-btn ${aiProvider === 'deepseek' ? 'active' : ''}`}
-                                    onClick={() => setAiProvider('deepseek')}
-                                >
-                                    🐋 DeepSeek
-                                </button>
-                                <button
-                                    className={`lang-btn ${aiProvider === 'groq' ? 'active' : ''}`}
-                                    onClick={() => setAiProvider('groq')}
-                                >
-                                    ⚡ Groq
-                                </button>
+                        <div style={{ display: 'flex', flexDirection: 'column', marginBottom: '12px', gap: '8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                                <span style={{ fontSize: '0.75rem', color: '#a0a0a8' }}>AI Provider:</span>
+                                <div className="lang-toggle">
+                                    <button
+                                        className={`lang-btn ${aiProvider === 'gemini' ? 'active' : ''}`}
+                                        onClick={() => setAiProvider('gemini')}
+                                    >
+                                        🔮 Gemini
+                                    </button>
+                                    <button
+                                        className={`lang-btn ${aiProvider === 'deepseek' ? 'active' : ''}`}
+                                        onClick={() => setAiProvider('deepseek')}
+                                    >
+                                        🐋 DeepSeek
+                                    </button>
+                                    <button
+                                        className={`lang-btn ${aiProvider === 'groq' ? 'active' : ''}`}
+                                        onClick={() => setAiProvider('groq')}
+                                    >
+                                        ⚡ Groq
+                                    </button>
+                                </div>
                             </div>
+
+                            {/* Groq Slot Selector */}
+                            {aiProvider === 'groq' && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '4px' }}>
+                                    <span style={{ fontSize: '0.7rem', color: '#7a7a85' }}>Slot:</span>
+                                    <div style={{ display: 'flex', gap: '4px' }}>
+                                        {[0, 1, 2, 3, 4].map((idx) => (
+                                            <button
+                                                key={idx}
+                                                onClick={() => setSelectedGroqIndex(idx)}
+                                                style={{
+                                                    width: '24px',
+                                                    height: '24px',
+                                                    borderRadius: '4px',
+                                                    border: '1px solid',
+                                                    borderColor: selectedGroqIndex === idx ? '#f5a623' : '#3a3a45',
+                                                    background: selectedGroqIndex === idx ? 'rgba(245, 166, 35, 0.1)' : '#1a1a20',
+                                                    color: selectedGroqIndex === idx ? '#f5a623' : '#a0a0a8',
+                                                    fontSize: '0.7rem',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s',
+                                                    fontWeight: 'bold'
+                                                }}
+                                            >
+                                                {idx + 1}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* Gemini API Key */}
@@ -388,7 +439,8 @@ function App() {
                                     placeholder="Enter Gemini API Key (AIza...)"
                                     value={geminiApiKey}
                                     onChange={(e) => setGeminiApiKey(e.target.value)}
-                                    // onClick={() => setShowApiKey(!showApiKey)}
+                                    onFocus={() => setShowApiKey(true)}
+                                    onBlur={() => setShowApiKey(false)}
                                     title="Click Analyze to see current key state"
                                 />
                                 <div className="form-hint">
@@ -409,7 +461,8 @@ function App() {
                                     placeholder="Enter DeepSeek API Key (sk-...)"
                                     value={deepseekApiKey}
                                     onChange={(e) => setDeepseekApiKey(e.target.value)}
-                                // onClick={() => setShowApiKey(!showApiKey)}
+                                    onFocus={() => setShowApiKey(true)}
+                                    onBlur={() => setShowApiKey(false)}
                                 />
                                 <div className="form-hint">
                                     <span></span>
@@ -426,13 +479,18 @@ function App() {
                                 <input
                                     type={showApiKey ? 'text' : 'password'}
                                     className="form-input"
-                                    placeholder="Enter Groq API Key (gsk_...)"
-                                    value={groqApiKey}
-                                    onChange={(e) => setGroqApiKey(e.target.value)}
-                                // onClick={() => setShowApiKey(!showApiKey)}
+                                    placeholder={`Enter Groq API Key Slot ${selectedGroqIndex + 1} (gsk_...)`}
+                                    value={groqApiKeys[selectedGroqIndex]}
+                                    onChange={(e) => {
+                                        const newKeys = [...groqApiKeys];
+                                        newKeys[selectedGroqIndex] = e.target.value;
+                                        setGroqApiKeys(newKeys);
+                                    }}
+                                    onFocus={() => setShowApiKey(true)}
+                                    onBlur={() => setShowApiKey(false)}
                                 />
                                 <div className="form-hint">
-                                    <span>⚡ Free & Fast</span>
+                                    <span>⚡ Slot {selectedGroqIndex + 1} Selected</span>
                                     <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer">
                                         Get Groq Key
                                     </a>
@@ -442,11 +500,13 @@ function App() {
 
                         {/* iTick Token */}
                         <input
-                            type="text"
+                            type={showApiKey ? 'text' : 'password'}
                             className="form-input"
                             placeholder="Enter iTick Token..."
                             value={itickToken}
                             onChange={(e) => setItickToken(e.target.value)}
+                            onFocus={() => setShowApiKey(true)}
+                            onBlur={() => setShowApiKey(false)}
                             style={{ marginTop: '12px' }}
                         />
                         <div className="form-hint">
@@ -534,7 +594,7 @@ function App() {
                     <button
                         className="btn-gold"
                         onClick={handleAnalyze}
-                        disabled={loading || analyzing || cooldown > 0 || !itickToken || !(geminiApiKey || deepseekApiKey || groqApiKey)}
+                        disabled={loading || analyzing || cooldown > 0 || !itickToken || !(geminiApiKey || deepseekApiKey || groqApiKeys[selectedGroqIndex])}
                     >
                         {loading || analyzing ? (
                             <span className="loading-text">
