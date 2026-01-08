@@ -323,55 +323,65 @@ function App() {
                         </div>
 
                         {/* Gemini API Key */}
-                        <input
-                            type={showApiKey ? 'text' : 'password'}
-                            className="form-input"
-                            placeholder="Enter Gemini API Key (AIza...)"
-                            value={geminiApiKey}
-                            onChange={(e) => setGeminiApiKey(e.target.value)}
-                            onClick={() => setShowApiKey(!showApiKey)}
-                            style={{ opacity: aiProvider === 'gemini' ? 1 : 0.5 }}
-                        />
-                        <div className="form-hint">
-                            <span>💾 Saved locally</span>
-                            <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">
-                                Get Gemini Key
-                            </a>
-                        </div>
+                        {aiProvider === 'gemini' && (
+                            <>
+                                <input
+                                    type={showApiKey ? 'text' : 'password'}
+                                    className="form-input"
+                                    placeholder="Enter Gemini API Key (AIza...)"
+                                    value={geminiApiKey}
+                                    onChange={(e) => setGeminiApiKey(e.target.value)}
+                                    // onClick={() => setShowApiKey(!showApiKey)}
+                                    title="Click Analyze to see current key state"
+                                />
+                                <div className="form-hint">
+                                    <span>💾 Saved locally</span>
+                                    <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">
+                                        Get Gemini Key
+                                    </a>
+                                </div>
+                            </>
+                        )}
 
                         {/* DeepSeek API Key */}
-                        <input
-                            type={showApiKey ? 'text' : 'password'}
-                            className="form-input"
-                            placeholder="Enter DeepSeek API Key (sk-...)"
-                            value={deepseekApiKey}
-                            onChange={(e) => setDeepseekApiKey(e.target.value)}
-                            onClick={() => setShowApiKey(!showApiKey)}
-                            style={{ marginTop: '12px', opacity: aiProvider === 'deepseek' ? 1 : 0.5 }}
-                        />
-                        <div className="form-hint">
-                            <span></span>
-                            <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener noreferrer">
-                                Get DeepSeek Key
-                            </a>
-                        </div>
+                        {aiProvider === 'deepseek' && (
+                            <>
+                                <input
+                                    type={showApiKey ? 'text' : 'password'}
+                                    className="form-input"
+                                    placeholder="Enter DeepSeek API Key (sk-...)"
+                                    value={deepseekApiKey}
+                                    onChange={(e) => setDeepseekApiKey(e.target.value)}
+                                // onClick={() => setShowApiKey(!showApiKey)}
+                                />
+                                <div className="form-hint">
+                                    <span></span>
+                                    <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener noreferrer">
+                                        Get DeepSeek Key
+                                    </a>
+                                </div>
+                            </>
+                        )}
 
                         {/* Groq API Key */}
-                        <input
-                            type={showApiKey ? 'text' : 'password'}
-                            className="form-input"
-                            placeholder="Enter Groq API Key (gsk_...)"
-                            value={groqApiKey}
-                            onChange={(e) => setGroqApiKey(e.target.value)}
-                            onClick={() => setShowApiKey(!showApiKey)}
-                            style={{ marginTop: '12px', opacity: aiProvider === 'groq' ? 1 : 0.5 }}
-                        />
-                        <div className="form-hint">
-                            <span>⚡ Free & Fast</span>
-                            <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer">
-                                Get Groq Key
-                            </a>
-                        </div>
+                        {aiProvider === 'groq' && (
+                            <>
+                                <input
+                                    type={showApiKey ? 'text' : 'password'}
+                                    className="form-input"
+                                    placeholder="Enter Groq API Key (gsk_...)"
+                                    value={groqApiKey}
+                                    onChange={(e) => setGroqApiKey(e.target.value)}
+                                // onClick={() => setShowApiKey(!showApiKey)}
+                                />
+                                <div className="form-hint">
+                                    <span>⚡ Free & Fast</span>
+                                    <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer">
+                                        Get Groq Key
+                                    </a>
+                                </div>
+                            </>
+                        )}
 
                         {/* iTick Token */}
                         <input
