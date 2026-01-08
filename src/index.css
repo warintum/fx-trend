@@ -961,3 +961,356 @@ body {
   background: var(--border-color);
   border-radius: 2px;
 }
+
+/* ========================================
+   New Result Panel UI Styles
+   ======================================== */
+
+/* Main Signal Container */
+.main-signal-container {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.main-signal-box {
+  flex: 2;
+  padding: var(--spacing-md);
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(139, 92, 246, 0.08));
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  border-radius: var(--radius-md);
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.main-signal-box.buy {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(16, 185, 129, 0.08));
+  border-color: rgba(34, 197, 94, 0.3);
+  color: var(--accent-green);
+}
+
+.main-signal-box.sell {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.08));
+  border-color: rgba(239, 68, 68, 0.3);
+  color: var(--accent-red);
+}
+
+.main-signal-box.wait {
+  background: linear-gradient(135deg, rgba(245, 166, 35, 0.15), rgba(255, 200, 87, 0.08));
+  border-color: rgba(245, 166, 35, 0.3);
+  color: var(--accent-gold);
+}
+
+/* Confidence Box */
+.confidence-box {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-md);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.confidence-box .confidence-label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.confidence-box .confidence-value {
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.confidence-box .confidence-value.high {
+  color: var(--accent-green);
+}
+
+.confidence-box .confidence-value.medium {
+  color: var(--accent-gold);
+}
+
+.confidence-box .confidence-value.low {
+  color: var(--accent-red);
+}
+
+/* AI Status Row */
+.ai-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-md);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.ai-status {
+  font-weight: 600;
+}
+
+.ai-status.analyzing {
+  color: var(--accent-gold);
+  animation: blink 1s ease-in-out infinite;
+}
+
+.ai-status.done {
+  color: var(--accent-green);
+}
+
+@keyframes blink {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Zone Recommendation */
+.zone-recommendation {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(6, 182, 212, 0.05));
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  border-left: 4px solid var(--accent-cyan);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.zone-rec-header {
+  margin-bottom: var(--spacing-sm);
+}
+
+.zone-rec-label {
+  font-size: 0.7rem;
+  color: var(--accent-cyan);
+  text-transform: uppercase;
+}
+
+.zone-rec-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.zone-rec-content.buy {
+  color: var(--accent-green);
+}
+
+.zone-rec-content.sell {
+  color: var(--accent-red);
+}
+
+.zone-rec-icon {
+  font-size: 1.5rem;
+  opacity: 0.5;
+}
+
+/* Current Price Box */
+.current-price-box {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.08), rgba(6, 182, 212, 0.03));
+  border: 1px solid rgba(6, 182, 212, 0.2);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.current-price-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  display: block;
+  margin-bottom: var(--spacing-sm);
+}
+
+.current-price-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.current-price-value {
+  font-family: var(--font-mono);
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--accent-cyan);
+}
+
+.current-price-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  font-size: 1rem;
+  color: var(--text-muted);
+}
+
+/* SL/TP Grid New */
+.sltp-grid-new {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.sltp-box-new {
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+}
+
+.sltp-box-new.sl {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(220, 38, 38, 0.06));
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.sltp-box-new.tp {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.12), rgba(16, 185, 129, 0.06));
+  border: 1px solid rgba(34, 197, 94, 0.25);
+}
+
+.sltp-label-new {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-bottom: var(--spacing-xs);
+}
+
+.sltp-value-new {
+  font-family: var(--font-mono);
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.sltp-box-new.sl .sltp-value-new {
+  color: var(--accent-red);
+}
+
+.sltp-box-new.tp .sltp-value-new {
+  color: var(--accent-green);
+}
+
+/* AI Analysis Box */
+.ai-analysis-box {
+  background: var(--bg-primary);
+  /* Dark background like reference */
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  /* Louder rounded corners */
+  padding: 20px;
+  margin-bottom: 24px;
+  /* Space below reasoning */
+  margin-top: 0;
+  /* Reset top margin since it's now first */
+}
+
+.ai-analysis-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: 12px;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.ai-analysis-header span:first-child {
+  font-weight: 700;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-analysis-content {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: #d1d5db;
+  /* Lighter grey for better readability */
+  text-align: left;
+}
+
+/* Result Header Row */
+.result-header-row {
+  margin-bottom: 16px;
+  border-top: 1px solid var(--border-color);
+  padding-top: 24px;
+}
+
+/* Zones Grid New - Demand/Supply */
+.zones-grid-new {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.zone-box-new {
+  padding: 16px;
+  background: #1f2937;
+  /* Dark grayish blue background */
+  border-radius: 12px;
+  border: none;
+}
+
+.zone-header-new {
+  font-size: 0.75rem;
+  margin-bottom: 4px;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.zone-header-new.buy {
+  color: #9ca3af;
+  /* Greyish text for label */
+}
+
+.zone-header-new.sell {
+  color: #9ca3af;
+}
+
+.zone-value-new {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.zone-box-new:first-child .zone-value-new {
+  color: var(--accent-green);
+  /* Green value for Demand/Buy */
+}
+
+.zone-box-new:last-child .zone-value-new {
+  color: var(--accent-red);
+  /* Red value for Supply/Sell */
+}
+
+/* Mobile Responsive for New UI */
+@media (max-width: 768px) {
+  .main-signal-container {
+    flex-direction: column;
+  }
+
+  .sltp-grid-new,
+  .zones-grid-new {
+    grid-template-columns: 1fr;
+  }
+
+  .current-price-value {
+    font-size: 1.5rem;
+  }
+}

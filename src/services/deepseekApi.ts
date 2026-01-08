@@ -1,5 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { KlineData, AnalysisResult, Signal } from '../types';
+import { AnalysisResult, KlineData } from '../types';
 
 interface TimeframeAnalysisData {
     M5: KlineData[];
@@ -9,12 +8,10 @@ interface TimeframeAnalysisData {
 }
 
 function formatKlineForPrompt(data: KlineData[], timeframe: string): string {
-    // Take latest 20 candles for analysis
-    const latest = data.slice(-20);
-    const formatted = latest.map((k, i) =>
-        `${i + 1}. O:${k.open.toFixed(2)} H:${k.high.toFixed(2)} L:${k.low.toFixed(2)} C:${k.close.toFixed(2)}`
+    const recent = data.slice(-20);
+    const formatted = recent.map(k =>
+        `${new Date(k.timestamp).toISOString().slice(0, 16)} O:${k.open.toFixed(2)} H:${k.high.toFixed(2)} L:${k.low.toFixed(2)} C:${k.close.toFixed(2)}`
     ).join('\n');
-
     return `[${timeframe}]\n${formatted}`;
 }
 
@@ -51,7 +48,7 @@ ${m5Text}
 5. อธิบายเหตุผลประกอบอย่างละเอียด 3-5 ประโยค
 
 ตอบเป็น JSON (ต้องมี reasoning ละเอียด 3-5 ประโยค):
-{"currentPrice":${latestPrice.toFixed(2)},"trend":"BULLISH|BEARISH|SIDEWAYS","structure":"อธิบายโครงสร้างตลาดระยะสั้น M5/M30 - Higher High/Low หรือ Lower High/Low พร้อมเหตุผล","keyLevels":{"support":[num,num],"resistance":[num,num]},"signal":{"type":"BUY|SELL|WAIT","entryPrice":num,"stopLoss":num,"takeProfit":num,"confidence":0-100,"reasoning":"อธิบายเหตุผลละเอียด 3-5 ประโยค: ทำไมต้องเข้าตรงนี้? momentum เป็นอย่างไร? มี divergence หรือไม่? ความเสี่ยงคืออะไร?"},"summary":"สรุปสถานการณ์ระยะสั้น พร้อมแนะนำจุดเข้า-ออก และเวลาที่ควรถือ"}`
+{"currentPrice":${latestPrice.toFixed(2)},"trend":"BULLISH|BEARISH|SIDEWAYS","structure":"อธิบายโครงสร้างตลาดระยะสั้น M5/M30","keyLevels":{"support":[num,num],"resistance":[num,num]},"signal":{"type":"BUY|SELL|WAIT","entryPrice":num,"stopLoss":num,"takeProfit":num,"confidence":0-100,"reasoning":"อธิบายเหตุผลละเอียด 3-5 ประโยค"},"summary":"สรุปสถานการณ์ระยะสั้น"}`;
     } else {
         return `คุณเป็นนักเทรด Day Trade มืออาชีพ วิเคราะห์ ${symbol} สำหรับ **การเทรดระยะกลาง** (Day Trade - เข้าและออกภายในวัน)
 
@@ -62,7 +59,7 @@ ${m30Text}
 
 📍 **ราคาปัจจุบัน: ${latestPrice.toFixed(2)}**
 
-🎯 **สไตล์การเทรด: DAY TRADE (เข้าและออกภายในวัน)**
+🎯 **สไตล์การเทรด: DAY TRADE (ภายในวัน)**
 - เป้าหมาย: ทำกำไรภายในวัน (2-8 ชั่วโมง)
 - SL กว้างกว่า: ใช้ SL ประมาณ 30-80 pips
 - TP ใหญ่กว่า: Risk:Reward อย่างน้อย 1:2
@@ -76,14 +73,13 @@ ${m30Text}
 5. อธิบายเหตุผลประกอบอย่างละเอียด 3-5 ประโยค
 
 ตอบเป็น JSON (ต้องมี reasoning ละเอียด 3-5 ประโยค):
-{"currentPrice":${latestPrice.toFixed(2)},"trend":"BULLISH|BEARISH|SIDEWAYS","structure":"อธิบายโครงสร้างตลาดจาก H4/H1 - Higher High/Low หรือ Lower High/Low พร้อมเหตุผล","keyLevels":{"support":[num,num],"resistance":[num,num]},"signal":{"type":"BUY|SELL|WAIT","entryPrice":num,"stopLoss":num,"takeProfit":num,"confidence":0-100,"reasoning":"อธิบายเหตุผลละเอียด 3-5 ประโยค: วิเคราะห์ trend หลัก, key levels, momentum, และความเสี่ยง"},"summary":"สรุปสถานการณ์ Day Trade พร้อมแนะนำจุดเข้า-ออก และระยะเวลาถือ"}`
+{"currentPrice":${latestPrice.toFixed(2)},"trend":"BULLISH|BEARISH|SIDEWAYS","structure":"อธิบายโครงสร้างตลาดจาก H4/H1","keyLevels":{"support":[num,num],"resistance":[num,num]},"signal":{"type":"BUY|SELL|WAIT","entryPrice":num,"stopLoss":num,"takeProfit":num,"confidence":0-100,"reasoning":"อธิบายเหตุผลละเอียด 3-5 ประโยค"},"summary":"สรุปสถานการณ์ Day Trade"}`;
     }
 }
 
 function parseAnalysisResponse(responseText: string): AnalysisResult {
-    console.log('[Gemini] Raw response:', responseText);
+    console.log('[DeepSeek] Raw response:', responseText);
 
-    // Try to extract JSON from the response
     let jsonStr = responseText.trim();
 
     // Remove markdown code blocks if present
@@ -98,7 +94,7 @@ function parseAnalysisResponse(responseText: string): AnalysisResult {
 
     jsonStr = jsonStr.trim();
 
-    // Try to find JSON object in the text (between first { and last })
+    // Try to find JSON object
     const firstBrace = jsonStr.indexOf('{');
     const lastBrace = jsonStr.lastIndexOf('}');
     if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
@@ -107,12 +103,11 @@ function parseAnalysisResponse(responseText: string): AnalysisResult {
 
     try {
         const parsed = JSON.parse(jsonStr) as AnalysisResult;
-        console.log('[Gemini] Parsed successfully:', parsed);
+        console.log('[DeepSeek] Parsed successfully:', parsed);
         return parsed;
     } catch (err) {
-        // Return a default result if parsing fails
-        console.error('[Gemini] Failed to parse response:', err);
-        console.error('[Gemini] JSON string was:', jsonStr);
+        console.error('[DeepSeek] Failed to parse response:', err);
+        console.error('[DeepSeek] JSON string was:', jsonStr);
         return {
             currentPrice: 0,
             trend: 'SIDEWAYS',
@@ -131,35 +126,51 @@ function parseAnalysisResponse(responseText: string): AnalysisResult {
     }
 }
 
-export async function analyzeMarket(
+export async function analyzeMarketWithDeepSeek(
     apiKey: string,
     symbol: string,
     data: TimeframeAnalysisData,
     duration: 'short' | 'medium' = 'short'
 ): Promise<AnalysisResult> {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    // Use gemini-3-flash-preview - latest Gemini 3 Flash model
-    const model = genAI.getGenerativeModel({
-        model: 'gemini-3-flash-preview',
-        generationConfig: {
-            temperature: 0.5,  // Lower for more consistent output
-            topP: 0.9,
-            topK: 40,
-            maxOutputTokens: 4096,  // Increased to prevent truncation
-            responseMimeType: 'application/json',  // Force JSON output
-        },
-    });
-
     const prompt = buildAnalysisPrompt(symbol, data, duration);
 
-    try {
-        const result = await model.generateContent(prompt);
-        const response = result.response;
-        const text = response.text();
+    const response = await fetch('https://api.deepseek.com/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+            model: 'deepseek-chat',
+            messages: [
+                {
+                    role: 'system',
+                    content: 'You are a professional forex analyst. Always respond with valid JSON only, no markdown or extra text.',
+                },
+                {
+                    role: 'user',
+                    content: prompt,
+                },
+            ],
+            temperature: 0.5,
+            max_tokens: 4096,
+            response_format: { type: 'json_object' },
+        }),
+    });
 
-        return parseAnalysisResponse(text);
-    } catch (error) {
-        console.error('Gemini API error:', error);
-        throw new Error(`Gemini API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[DeepSeek] API error:', response.status, errorText);
+        throw new Error(`DeepSeek API error: ${response.status} - ${errorText}`);
     }
+
+    const result = await response.json();
+    console.log('[DeepSeek] API response:', result);
+
+    const text = result.choices?.[0]?.message?.content;
+    if (!text) {
+        throw new Error('DeepSeek API returned empty response');
+    }
+
+    return parseAnalysisResponse(text);
 }

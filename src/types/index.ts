@@ -26,6 +26,7 @@ export interface Signal {
 }
 
 export interface AnalysisResult {
+    currentPrice: number;
     trend: 'BULLISH' | 'BEARISH' | 'SIDEWAYS';
     structure: string;
     keyLevels: {
@@ -43,10 +44,11 @@ export interface ApiConfig {
 
 export const SYMBOLS = [
     { code: 'XAUUSD', name: 'Gold / USD', region: 'GB' },
-    { code: 'BTCUSD', name: 'Bitcoin / USD', region: 'GB' },
+    { code: 'BTCUSDT', name: 'Bitcoin / USDT', region: 'GB' },
+    { code: 'ETHUSDT', name: 'Ethereum / USDT', region: 'GB' },
+    { code: 'USDJPY', name: 'USD / JPY', region: 'GB' },
     { code: 'EURUSD', name: 'EUR / USD', region: 'GB' },
     { code: 'GBPUSD', name: 'GBP / USD', region: 'GB' },
-    { code: 'USDJPY', name: 'USD / JPY', region: 'GB' },
     { code: 'AUDUSD', name: 'AUD / USD', region: 'GB' },
 ] as const;
 

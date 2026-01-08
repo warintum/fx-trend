@@ -1,5 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { KlineData, AnalysisResult, Signal } from '../types';
+import { AnalysisResult, KlineData } from '../types';
 
 interface TimeframeAnalysisData {
     M5: KlineData[];
@@ -9,12 +8,10 @@ interface TimeframeAnalysisData {
 }
 
 function formatKlineForPrompt(data: KlineData[], timeframe: string): string {
-    // Take latest 20 candles for analysis
-    const latest = data.slice(-20);
-    const formatted = latest.map((k, i) =>
-        `${i + 1}. O:${k.open.toFixed(2)} H:${k.high.toFixed(2)} L:${k.low.toFixed(2)} C:${k.close.toFixed(2)}`
+    const recent = data.slice(-20);
+    const formatted = recent.map(k =>
+        `${new Date(k.timestamp).toISOString().slice(0, 16)} O:${k.open.toFixed(2)} H:${k.high.toFixed(2)} L:${k.low.toFixed(2)} C:${k.close.toFixed(2)}`
     ).join('\n');
-
     return `[${timeframe}]\n${formatted}`;
 }
 
@@ -48,10 +45,10 @@ ${m5Text}
 2. ระบุ market structure: Higher High/Higher Low หรือ Lower High/Lower Low
 3. หา key support/resistance ใกล้ราคาปัจจุบัน
 4. ให้สัญญาณเทรดพร้อม Entry, SL, TP ที่ชัดเจน
-5. อธิบายเหตุผลประกอบอย่างละเอียด 3-5 ประโยค
+5. **อธิบายเหตุผลประกอบอย่างละเอียด 4-6 ประโยค** (สำคัญมาก!)
 
-ตอบเป็น JSON (ต้องมี reasoning ละเอียด 3-5 ประโยค):
-{"currentPrice":${latestPrice.toFixed(2)},"trend":"BULLISH|BEARISH|SIDEWAYS","structure":"อธิบายโครงสร้างตลาดระยะสั้น M5/M30 - Higher High/Low หรือ Lower High/Low พร้อมเหตุผล","keyLevels":{"support":[num,num],"resistance":[num,num]},"signal":{"type":"BUY|SELL|WAIT","entryPrice":num,"stopLoss":num,"takeProfit":num,"confidence":0-100,"reasoning":"อธิบายเหตุผลละเอียด 3-5 ประโยค: ทำไมต้องเข้าตรงนี้? momentum เป็นอย่างไร? มี divergence หรือไม่? ความเสี่ยงคืออะไร?"},"summary":"สรุปสถานการณ์ระยะสั้น พร้อมแนะนำจุดเข้า-ออก และเวลาที่ควรถือ"}`
+ตอบเป็น JSON (ต้องมี reasoning ละเอียด 4-6 ประโยค พร้อมวิเคราะห์ momentum, trend, key levels, ความเสี่ยง):
+{"currentPrice":${latestPrice.toFixed(2)},"trend":"BULLISH|BEARISH|SIDEWAYS","structure":"อธิบายโครงสร้างตลาดระยะสั้น M5/M30 - Higher High/Low, Lower High/Low, momentum direction","keyLevels":{"support":[num,num],"resistance":[num,num]},"signal":{"type":"BUY|SELL|WAIT","entryPrice":num,"stopLoss":num,"takeProfit":num,"confidence":0-100,"reasoning":"อธิบายเหตุผลละเอียด 4-6 ประโยค: 1) วิเคราะห์ trend และ momentum ปัจจุบัน 2) ระบุ key levels ที่สำคัญ 3) อธิบายเหตุผลว่าทำไมต้องเข้าตรงนี้ 4) ความเสี่ยงและ stop loss strategy 5) target และระยะเวลาถือ"},"summary":"สรุปสถานการณ์ระยะสั้น พร้อมแนะนำจุดเข้า-ออก และเวลาที่ควรถือ"}`
     } else {
         return `คุณเป็นนักเทรด Day Trade มืออาชีพ วิเคราะห์ ${symbol} สำหรับ **การเทรดระยะกลาง** (Day Trade - เข้าและออกภายในวัน)
 
@@ -73,17 +70,16 @@ ${m30Text}
 2. ระบุ market structure: Higher High/Higher Low หรือ Lower High/Lower Low
 3. หา key support/resistance zones สำคัญ
 4. ให้สัญญาณเทรดพร้อม Entry, SL, TP ที่เหมาะกับ Day Trade
-5. อธิบายเหตุผลประกอบอย่างละเอียด 3-5 ประโยค
+5. **อธิบายเหตุผลประกอบอย่างละเอียด 4-6 ประโยค** (สำคัญมาก!)
 
-ตอบเป็น JSON (ต้องมี reasoning ละเอียด 3-5 ประโยค):
-{"currentPrice":${latestPrice.toFixed(2)},"trend":"BULLISH|BEARISH|SIDEWAYS","structure":"อธิบายโครงสร้างตลาดจาก H4/H1 - Higher High/Low หรือ Lower High/Low พร้อมเหตุผล","keyLevels":{"support":[num,num],"resistance":[num,num]},"signal":{"type":"BUY|SELL|WAIT","entryPrice":num,"stopLoss":num,"takeProfit":num,"confidence":0-100,"reasoning":"อธิบายเหตุผลละเอียด 3-5 ประโยค: วิเคราะห์ trend หลัก, key levels, momentum, และความเสี่ยง"},"summary":"สรุปสถานการณ์ Day Trade พร้อมแนะนำจุดเข้า-ออก และระยะเวลาถือ"}`
+ตอบเป็น JSON (ต้องมี reasoning ละเอียด 4-6 ประโยค พร้อมวิเคราะห์ trend, structure, key levels):
+{"currentPrice":${latestPrice.toFixed(2)},"trend":"BULLISH|BEARISH|SIDEWAYS","structure":"อธิบายโครงสร้างตลาดจาก H4/H1 - Higher High/Low, Lower High/Low, overall market bias","keyLevels":{"support":[num,num],"resistance":[num,num]},"signal":{"type":"BUY|SELL|WAIT","entryPrice":num,"stopLoss":num,"takeProfit":num,"confidence":0-100,"reasoning":"อธิบายเหตุผลละเอียด 4-6 ประโยค: 1) วิเคราะห์ trend หลักจาก H4/H1 2) market structure และ key levels 3) เหตุผลที่แนะนำสัญญาณนี้ 4) risk management และ stop loss 5) target profit และระยะเวลาถือ"},"summary":"สรุปสถานการณ์ Day Trade พร้อมแนะนำจุดเข้า-ออก และระยะเวลาถือ"}`
     }
 }
 
 function parseAnalysisResponse(responseText: string): AnalysisResult {
-    console.log('[Gemini] Raw response:', responseText);
+    console.log('[Groq] Raw response:', responseText);
 
-    // Try to extract JSON from the response
     let jsonStr = responseText.trim();
 
     // Remove markdown code blocks if present
@@ -98,7 +94,7 @@ function parseAnalysisResponse(responseText: string): AnalysisResult {
 
     jsonStr = jsonStr.trim();
 
-    // Try to find JSON object in the text (between first { and last })
+    // Try to find JSON object
     const firstBrace = jsonStr.indexOf('{');
     const lastBrace = jsonStr.lastIndexOf('}');
     if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
@@ -107,12 +103,10 @@ function parseAnalysisResponse(responseText: string): AnalysisResult {
 
     try {
         const parsed = JSON.parse(jsonStr) as AnalysisResult;
-        console.log('[Gemini] Parsed successfully:', parsed);
+        console.log('[Groq] Parsed successfully:', parsed);
         return parsed;
     } catch (err) {
-        // Return a default result if parsing fails
-        console.error('[Gemini] Failed to parse response:', err);
-        console.error('[Gemini] JSON string was:', jsonStr);
+        console.error('[Groq] Failed to parse response:', err);
         return {
             currentPrice: 0,
             trend: 'SIDEWAYS',
@@ -131,35 +125,51 @@ function parseAnalysisResponse(responseText: string): AnalysisResult {
     }
 }
 
-export async function analyzeMarket(
+export async function analyzeMarketWithGroq(
     apiKey: string,
     symbol: string,
     data: TimeframeAnalysisData,
     duration: 'short' | 'medium' = 'short'
 ): Promise<AnalysisResult> {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    // Use gemini-3-flash-preview - latest Gemini 3 Flash model
-    const model = genAI.getGenerativeModel({
-        model: 'gemini-3-flash-preview',
-        generationConfig: {
-            temperature: 0.5,  // Lower for more consistent output
-            topP: 0.9,
-            topK: 40,
-            maxOutputTokens: 4096,  // Increased to prevent truncation
-            responseMimeType: 'application/json',  // Force JSON output
-        },
-    });
-
     const prompt = buildAnalysisPrompt(symbol, data, duration);
 
-    try {
-        const result = await model.generateContent(prompt);
-        const response = result.response;
-        const text = response.text();
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+            model: 'llama-3.3-70b-versatile',
+            messages: [
+                {
+                    role: 'system',
+                    content: 'You are a professional forex analyst. Always respond with valid JSON only, no markdown or extra text.',
+                },
+                {
+                    role: 'user',
+                    content: prompt,
+                },
+            ],
+            temperature: 0.5,
+            max_tokens: 4096,
+            response_format: { type: 'json_object' },
+        }),
+    });
 
-        return parseAnalysisResponse(text);
-    } catch (error) {
-        console.error('Gemini API error:', error);
-        throw new Error(`Gemini API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[Groq] API error:', response.status, errorText);
+        throw new Error(`Groq API error: ${response.status} - ${errorText}`);
     }
+
+    const result = await response.json();
+    console.log('[Groq] API response:', result);
+
+    const text = result.choices?.[0]?.message?.content;
+    if (!text) {
+        throw new Error('Groq API returned empty response');
+    }
+
+    return parseAnalysisResponse(text);
 }

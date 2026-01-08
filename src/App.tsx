@@ -8,6 +8,8 @@ import {
 } from './types';
 import { getMultiTimeframeData } from './services/itickApi';
 import { analyzeMarket } from './services/geminiApi';
+import { analyzeMarketWithDeepSeek } from './services/deepseekApi';
+import { analyzeMarketWithGroq } from './services/groqApi';
 import { formatPrice } from './utils/formatters';
 import './index.css';
 
@@ -31,6 +33,15 @@ function App() {
     const [geminiApiKey, setGeminiApiKey] = useState(() =>
         localStorage.getItem('gemini_api_key') || ''
     );
+    const [deepseekApiKey, setDeepseekApiKey] = useState(() =>
+        localStorage.getItem('deepseek_api_key') || ''
+    );
+    const [groqApiKey, setGroqApiKey] = useState(() =>
+        localStorage.getItem('groq_api_key') || ''
+    );
+    const [aiProvider, setAiProvider] = useState<'gemini' | 'deepseek' | 'groq'>(() =>
+        (localStorage.getItem('ai_provider') as 'gemini' | 'deepseek' | 'groq') || 'gemini'
+    );
     const [itickToken, setItickToken] = useState(() =>
         localStorage.getItem('itick_token') || ''
     );
@@ -43,6 +54,9 @@ function App() {
     const [error, setError] = useState<string | null>(null);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [showApiKey, setShowApiKey] = useState(false);
+    const [tradeDuration, setTradeDuration] = useState<'short' | 'medium'>(() =>
+        (localStorage.getItem('trade_duration') as 'short' | 'medium') || 'short'
+    );
 
     // Refs
     const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -59,6 +73,22 @@ function App() {
     useEffect(() => {
         localStorage.setItem('gemini_api_key', geminiApiKey);
     }, [geminiApiKey]);
+
+    useEffect(() => {
+        localStorage.setItem('deepseek_api_key', deepseekApiKey);
+    }, [deepseekApiKey]);
+
+    useEffect(() => {
+        localStorage.setItem('groq_api_key', groqApiKey);
+    }, [groqApiKey]);
+
+    useEffect(() => {
+        localStorage.setItem('ai_provider', aiProvider);
+    }, [aiProvider]);
+
+    useEffect(() => {
+        localStorage.setItem('trade_duration', tradeDuration);
+    }, [tradeDuration]);
 
     useEffect(() => {
         localStorage.setItem('itick_token', itickToken);
@@ -148,8 +178,11 @@ function App() {
 
     // Fetch data and analyze
     const handleAnalyze = async () => {
-        if (!geminiApiKey) {
-            setError('กรุณาใส่ Gemini API Key');
+        const currentApiKey = aiProvider === 'gemini' ? geminiApiKey : aiProvider === 'deepseek' ? deepseekApiKey : groqApiKey;
+        const providerName = aiProvider === 'gemini' ? 'Gemini' : aiProvider === 'deepseek' ? 'DeepSeek' : 'Groq';
+
+        if (!currentApiKey) {
+            setError(`กรุณาใส่ ${providerName} API Key`);
             return;
         }
         if (!itickToken) {
@@ -166,8 +199,15 @@ function App() {
             const data = await getMultiTimeframeData(itickToken, selectedSymbol);
             setKlineData(data);
 
-            // Then analyze
-            const result = await analyzeMarket(geminiApiKey, selectedSymbol, data);
+            // Then analyze using selected provider with trade duration
+            let result;
+            if (aiProvider === 'gemini') {
+                result = await analyzeMarket(geminiApiKey, selectedSymbol, data, tradeDuration);
+            } else if (aiProvider === 'deepseek') {
+                result = await analyzeMarketWithDeepSeek(deepseekApiKey, selectedSymbol, data, tradeDuration);
+            } else {
+                result = await analyzeMarketWithGroq(groqApiKey, selectedSymbol, data, tradeDuration);
+            }
             setAnalysisResult(result);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
@@ -196,18 +236,16 @@ function App() {
         return date.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     };
 
-    const tabs: { id: Timeframe | 'ENTRY' | 'STRUCTURE' | 'TREND', label: string }[] = [
-        { id: 'ENTRY' as Timeframe, label: 'ENTRY' },
+    const tabs: { id: Timeframe, label: string }[] = [
         { id: 'M5', label: 'M5' },
-        { id: 'STRUCTURE' as Timeframe, label: 'STRUCTURE' },
         { id: 'M30', label: 'M30' },
-        { id: 'TREND' as Timeframe, label: 'TREND' },
+        { id: 'H1', label: 'H1' },
         { id: 'H4', label: 'H4' },
     ];
 
     return (
         <>
-            {/* Ticker Bar */}
+            {/* Ticker Bar 
             <div className="ticker-bar">
                 {TICKER_DATA.map((item, i) => (
                     <div key={i} className="ticker-item">
@@ -219,7 +257,7 @@ function App() {
                         </span>
                     </div>
                 ))}
-            </div>
+            </div>*/}
 
             {/* Header */}
             <header className="header">
@@ -229,8 +267,6 @@ function App() {
                         <span className="header-by">AI-Powered Analysis</span>
                     </div>
                     <div className="header-links">
-                        <a href="#">📷 ATIRXX</a>
-                        <a href="#">🎵 CRYFX1</a>
                         <div className="status-online">
                             <span className="status-dot"></span>
                             ONLINE
@@ -260,6 +296,33 @@ function App() {
                             <span className="card-icon">🔑</span>
                             <span className="card-title">:: การตั้งค่า API ::</span>
                         </div>
+
+                        {/* AI Provider Toggle */}
+                        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                            <span style={{ fontSize: '0.75rem', color: '#a0a0a8' }}>AI Provider:</span>
+                            <div className="lang-toggle">
+                                <button
+                                    className={`lang-btn ${aiProvider === 'gemini' ? 'active' : ''}`}
+                                    onClick={() => setAiProvider('gemini')}
+                                >
+                                    🔮 Gemini
+                                </button>
+                                <button
+                                    className={`lang-btn ${aiProvider === 'deepseek' ? 'active' : ''}`}
+                                    onClick={() => setAiProvider('deepseek')}
+                                >
+                                    🐋 DeepSeek
+                                </button>
+                                <button
+                                    className={`lang-btn ${aiProvider === 'groq' ? 'active' : ''}`}
+                                    onClick={() => setAiProvider('groq')}
+                                >
+                                    ⚡ Groq
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Gemini API Key */}
                         <input
                             type={showApiKey ? 'text' : 'password'}
                             className="form-input"
@@ -267,13 +330,50 @@ function App() {
                             value={geminiApiKey}
                             onChange={(e) => setGeminiApiKey(e.target.value)}
                             onClick={() => setShowApiKey(!showApiKey)}
+                            style={{ opacity: aiProvider === 'gemini' ? 1 : 0.5 }}
                         />
                         <div className="form-hint">
-                            <span>💾 Saved locally in browser</span>
+                            <span>💾 Saved locally</span>
                             <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">
-                                Get Free Gemini API Key
+                                Get Gemini Key
                             </a>
                         </div>
+
+                        {/* DeepSeek API Key */}
+                        <input
+                            type={showApiKey ? 'text' : 'password'}
+                            className="form-input"
+                            placeholder="Enter DeepSeek API Key (sk-...)"
+                            value={deepseekApiKey}
+                            onChange={(e) => setDeepseekApiKey(e.target.value)}
+                            onClick={() => setShowApiKey(!showApiKey)}
+                            style={{ marginTop: '12px', opacity: aiProvider === 'deepseek' ? 1 : 0.5 }}
+                        />
+                        <div className="form-hint">
+                            <span></span>
+                            <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener noreferrer">
+                                Get DeepSeek Key
+                            </a>
+                        </div>
+
+                        {/* Groq API Key */}
+                        <input
+                            type={showApiKey ? 'text' : 'password'}
+                            className="form-input"
+                            placeholder="Enter Groq API Key (gsk_...)"
+                            value={groqApiKey}
+                            onChange={(e) => setGroqApiKey(e.target.value)}
+                            onClick={() => setShowApiKey(!showApiKey)}
+                            style={{ marginTop: '12px', opacity: aiProvider === 'groq' ? 1 : 0.5 }}
+                        />
+                        <div className="form-hint">
+                            <span>⚡ Free & Fast</span>
+                            <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer">
+                                Get Groq Key
+                            </a>
+                        </div>
+
+                        {/* iTick Token */}
                         <input
                             type="text"
                             className="form-input"
@@ -290,16 +390,31 @@ function App() {
                         </div>
                     </div>
 
-                    {/* Mission Protocol */}
+                    {/* Chart Selection */}
                     <div className="card">
                         <div className="card-header">
-                            <span className="card-icon">ℹ️</span>
-                            <span className="card-title">:: MISSION PROTOCOL ::</span>
+                            <span className="card-icon">📊</span>
+                            <span className="card-title">:: เลือกกราฟ ::</span>
                         </div>
-                        <ul className="mission-list">
-                            <li>เตรียมกราฟ (สินทรัพย์ใดก็ได้)</li>
-                            <li>อัปโหลดรูปกราฟ [M5, M30, H4]</li>
-                        </ul>
+
+                        {/* Trade Duration Toggle */}
+                        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px', gap: '8px' }}>
+                            <span style={{ fontSize: '0.75rem', color: '#a0a0a8' }}>ระยะเวลา:</span>
+                            <div className="lang-toggle">
+                                <button
+                                    className={`lang-btn ${tradeDuration === 'short' ? 'active' : ''}`}
+                                    onClick={() => setTradeDuration('short')}
+                                >
+                                    ⚡ Scalping (10-60 นาที)
+                                </button>
+                                <button
+                                    className={`lang-btn ${tradeDuration === 'medium' ? 'active' : ''}`}
+                                    onClick={() => setTradeDuration('medium')}
+                                >
+                                    📈 Day Trade (ภายในวัน)
+                                </button>
+                            </div>
+                        </div>
 
                         {/* Symbol Selection */}
                         <select
@@ -352,7 +467,7 @@ function App() {
                     <button
                         className="btn-gold"
                         onClick={handleAnalyze}
-                        disabled={loading || analyzing || !geminiApiKey}
+                        disabled={loading || analyzing || !itickToken || !(geminiApiKey || deepseekApiKey || groqApiKey)}
                     >
                         {loading || analyzing ? (
                             <span className="loading-text">
@@ -380,90 +495,104 @@ function App() {
                             </div>
                         ) : (
                             <div className="analysis-section">
-                                {/* Analysis Header */}
-                                <div className="analysis-header">
-                                    <span>🤖 เหตุผลประกอบ (AI)</span>
-                                    <span className={`analysis-badge ${analysisResult.trend.toLowerCase()}`}>
-                                        {analysisResult.trend}
-                                    </span>
+                                {/* 1. AI Analysis Section (Top) */}
+                                <div className="ai-analysis-box">
+                                    <div className="ai-analysis-header">
+                                        <span>🤖 เหตุผลประกอบ (AI)</span>
+                                        <span className={`analysis-badge ${analysisResult.trend.toLowerCase()}`}>
+                                            {analysisResult.trend}
+                                        </span>
+                                    </div>
+                                    <div className="ai-analysis-content">
+                                        <p>{analysisResult.signal.reasoning}</p>
+                                    </div>
                                 </div>
 
-                                {/* Analysis Content */}
-                                <div className="analysis-content">
-                                    <p>{analysisResult.structure}</p>
-                                    <p>{analysisResult.summary}</p>
-                                </div>
-
-                                {/* Signal Section */}
-                                <div className="signal-section">
+                                {/* 2. Header with COPY button */}
+                                <div className="result-header-row">
                                     <div className="signal-header">
                                         <span className="signal-title">📊 ผลลัพธ์การวิเคราะห์</span>
                                         <button className="copy-btn" onClick={handleCopySignal}>
                                             📋 COPY
                                         </button>
                                     </div>
+                                </div>
 
-                                    {/* Confidence */}
-                                    <div className="confidence-row">
+                                {/* 3. Main Signal Box & Confidence */}
+                                <div className="main-signal-container">
+                                    <div className={`main-signal-box ${analysisResult.signal.type.toLowerCase()}`}>
+                                        {analysisResult.signal.type === 'WAIT'
+                                            ? 'ไม่แนะนำให้เข้าตรงนี้'
+                                            : analysisResult.signal.type === 'BUY'
+                                                ? '🟢 BUY - แนะนำซื้อ'
+                                                : '🔴 SELL - แนะนำขาย'}
+                                    </div>
+                                    <div className="confidence-box">
                                         <span className="confidence-label">CONFIDENCE</span>
-                                        <div className="confidence-bar">
-                                            <div
-                                                className="confidence-fill"
-                                                style={{ width: `${analysisResult.signal.confidence}%` }}
-                                            ></div>
-                                        </div>
-                                        <span className="confidence-value">{analysisResult.signal.confidence}%</span>
+                                        <span className={`confidence-value ${analysisResult.signal.confidence >= 70 ? 'high' : analysisResult.signal.confidence >= 50 ? 'medium' : 'low'}`}>
+                                            {analysisResult.signal.confidence}%
+                                        </span>
                                     </div>
+                                </div>
 
-                                    {/* Signal Card */}
-                                    <div className={`signal-card ${analysisResult.signal.type.toLowerCase()}`}>
-                                        <div className="signal-message">
-                                            {analysisResult.signal.type === 'WAIT'
-                                                ? 'ไม่แนะนำให้เข้าตรงนี้'
-                                                : analysisResult.signal.reasoning}
-                                        </div>
-                                        <div className={`signal-type-large ${analysisResult.signal.type.toLowerCase()}`}>
-                                            {analysisResult.signal.type === 'WAIT'
-                                                ? `Wait ${analysisResult.trend === 'BULLISH' ? 'BUY' : 'SELL'} Limit at ${formatPrice(analysisResult.signal.entryPrice)}`
-                                                : `${analysisResult.signal.type} at ${formatPrice(analysisResult.signal.entryPrice)}`}
+                                {/* 4. AI Volume Check Status */}
+                                <div className="ai-status-row">
+                                    <span>AI VOLUME CHECK</span>
+                                    <span className={`ai-status ${analyzing ? 'analyzing' : 'done'}`}>
+                                        {analyzing ? 'Analyzing...' : 'Analyzing...'}
+                                    </span>
+                                </div>
+
+                                {/* 5. Zone Recommendation */}
+                                <div className="zone-recommendation">
+                                    <div className="zone-rec-header">
+                                        <span className="zone-rec-label">โซนแนะนำ / รอเข้า</span>
+                                    </div>
+                                    <div className={`zone-rec-content ${analysisResult.signal.type.toLowerCase()}`}>
+                                        {analysisResult.signal.type === 'WAIT'
+                                            ? `Wait ${analysisResult.trend === 'BULLISH' ? 'BUY' : 'SELL'} Limit at ${formatPrice(analysisResult.signal.entryPrice)}`
+                                            : `${analysisResult.signal.type} at ${formatPrice(analysisResult.signal.entryPrice)}`}
+                                        <span className="zone-rec-icon">�</span>
+                                    </div>
+                                </div>
+
+                                {/* 6. Current Price */}
+                                <div className="current-price-box">
+                                    <span className="current-price-label">จุดเข้าปัจจุบัน</span>
+                                    <div className="current-price-row">
+                                        <span className="current-price-value">{formatPrice(analysisResult.currentPrice || analysisResult.signal.entryPrice)}</span>
+                                        <span className="current-price-icon">⊕</span>
+                                    </div>
+                                </div>
+
+                                {/* 7. SL/TP Grid */}
+                                <div className="sltp-grid-new">
+                                    <div className="sltp-box-new sl">
+                                        <div className="sltp-label-new">จุดตัดขาดทุน (SL)</div>
+                                        <div className="sltp-value-new">{formatPrice(analysisResult.signal.stopLoss)}</div>
+                                    </div>
+                                    <div className="sltp-box-new tp">
+                                        <div className="sltp-label-new">จุดทำกำไร (TP)</div>
+                                        <div className="sltp-value-new">{formatPrice(analysisResult.signal.takeProfit)}</div>
+                                    </div>
+                                </div>
+
+                                {/* 8. Demand/Supply Zones */}
+                                <div className="zones-grid-new">
+                                    <div className="zone-box-new">
+                                        <div className="zone-header-new buy">โซนรอ BUY (Demand)</div>
+                                        <div className="zone-value-new">
+                                            {analysisResult.keyLevels.support.length > 0
+                                                ? `${formatPrice(analysisResult.keyLevels.support[0])}-${formatPrice(analysisResult.keyLevels.support[1] || analysisResult.keyLevels.support[0])}`
+                                                : '-'}
                                         </div>
                                     </div>
-
-                                    {/* Entry */}
-                                    <div className="entry-section">
-                                        <span className="entry-label">จุดเข้าปัจจุบัน</span>
-                                        <span className="entry-price">{formatPrice(analysisResult.signal.entryPrice)}</span>
-                                    </div>
-
-                                    {/* SL/TP */}
-                                    <div className="sltp-grid">
-                                        <div className="sltp-box">
-                                            <div className="sltp-label">จุดตัดขาดทุน (SL)</div>
-                                            <div className="sltp-value sl">{formatPrice(analysisResult.signal.stopLoss)}</div>
-                                        </div>
-                                        <div className="sltp-box">
-                                            <div className="sltp-label">จุดทำกำไร (TP)</div>
-                                            <div className="sltp-value tp">{formatPrice(analysisResult.signal.takeProfit)}</div>
-                                        </div>
-                                    </div>
-
-                                    {/* Zones */}
-                                    <div className="zones-grid">
-                                        <div className="zone-box">
-                                            <div className="zone-label buy">โซน BUY (Demand)</div>
-                                            <div className="zone-value">
-                                                {analysisResult.keyLevels.support.length > 0
-                                                    ? `${formatPrice(analysisResult.keyLevels.support[0])}-${formatPrice(analysisResult.keyLevels.support[1] || analysisResult.keyLevels.support[0])}`
-                                                    : '-'}
-                                            </div>
-                                        </div>
-                                        <div className="zone-box">
-                                            <div className="zone-label sell">โซน SELL (Supply)</div>
-                                            <div className="zone-value">
-                                                {analysisResult.keyLevels.resistance.length > 0
-                                                    ? `${formatPrice(analysisResult.keyLevels.resistance[0])}-${formatPrice(analysisResult.keyLevels.resistance[1] || analysisResult.keyLevels.resistance[0])}`
-                                                    : '-'}
-                                            </div>
+                                    <div className="zone-box-new">
+                                        <div className="zone-header-new sell">โซนรอ SELL (Supply)</div>
+                                        <div className="zone-value-new">
+                                            {analysisResult.keyLevels.resistance.length > 0
+                                                ? `${formatPrice(analysisResult.keyLevels.resistance[0])}-${formatPrice(analysisResult.keyLevels.resistance[1] || analysisResult.keyLevels.resistance[0])}`
+                                                : '-'}
                                         </div>
                                     </div>
                                 </div>
@@ -480,7 +609,7 @@ function App() {
                     <a href="https://itick.org" target="_blank" rel="noopener noreferrer">iTick API</a>
                     {' + '}
                     <a href="https://ai.google.dev" target="_blank" rel="noopener noreferrer">Gemini AI</a>
-                    {' • '}© 2024 FX Trend Analyzer • Not financial advice
+                    {' • '}© 2026 FX Trend Analyzer • Not financial advice
                 </p>
             </footer>
         </>
