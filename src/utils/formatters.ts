@@ -1,10 +1,7 @@
 export function formatPrice(price: number | string, decimals: number = 2): string {
     const num = typeof price === 'string' ? parseFloat(price) : price;
     if (isNaN(num)) return '-';
-    return num.toLocaleString('en-US', {
-        minimumFractionDigits: decimals,
-        maximumFractionDigits: decimals,
-    });
+    return num.toFixed(decimals);
 }
 
 export function formatTimestamp(timestamp: number): string {
