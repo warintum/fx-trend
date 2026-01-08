@@ -42,7 +42,13 @@ export async function fetchKlineData(
         console.log('[iTick API] Response body:', responseText.substring(0, 500));
 
         if (!response.ok) {
-            throw new Error(`iTick API HTTP error: ${response.status} ${response.statusText}`);
+            if (response.status === 401) {
+                throw new Error('iTick Token ไม่ถูกต้องหรือหมดอายุ กรุณาตรวจสอบการตั้งค่าครับ');
+            }
+            if (response.status === 429) {
+                throw new Error('คุณเรียกข้อมูลจาก iTick บ่อยเกินไป (จำกัด 5 ครั้ง/นาที) กรุณารอจนกว่าคูลดาวน์จะหมดครับ');
+            }
+            throw new Error(`iTick API เกิดข้อผิดพลาด: ${response.status} ${response.statusText}`);
         }
 
         let jsonData: ITickApiResponse;

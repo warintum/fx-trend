@@ -1101,14 +1101,14 @@ body {
   background: #1e222d;
   border: 2px solid #2a2e39;
   border-radius: 12px;
-  padding: 20px;
-  font-size: 1.4rem;
+  padding: 12px;
+  font-size: 1.3rem;
   font-weight: 800;
   text-align: center;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: #dbd9d9;
 }
 
 .signal-action-box.buy {
@@ -1178,7 +1178,7 @@ body {
 .feature-card-premium {
   background: #0d0d0f;
   border-radius: 10px;
-  padding: 18px 20px;
+  padding: 5px 20px;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -1211,10 +1211,34 @@ body {
   font-family: var(--font-mono);
 }
 
+.card-value-large-premium.blue {
+  color: #06b6d4;
+}
+
 .card-value-medium-premium {
-  font-size: 1.35rem;
+  font-size: 1.2rem;
   font-weight: 800;
   font-family: var(--font-mono);
+}
+
+.card-value-medium-premium.purple {
+  color: #a855f7;
+}
+
+.card-value-medium-premium.red {
+  color: #ef4444;
+}
+
+.card-value-medium-premium.green {
+  color: #22c55e;
+}
+
+.card-value-medium-premium.white {
+  color: #fff;
+}
+
+.card-value-medium-premium.blue {
+  color: #06b6d4;
 }
 
 .card-icon-premium {
@@ -1284,18 +1308,18 @@ body {
 .zone-box-dark {
   background: #1e222d;
   border-radius: 12px;
-  padding: 16px;
+  padding: 10px;
 }
 
 .zone-label-dark {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 600;
   color: #9ca3af;
   margin-bottom: 6px;
 }
 
 .zone-value-dark {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 800;
   font-family: var(--font-mono);
 }

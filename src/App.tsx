@@ -45,10 +45,25 @@ function App() {
     const [itickToken, setItickToken] = useState(() =>
         localStorage.getItem('itick_token') || ''
     );
-    const [selectedSymbol, setSelectedSymbol] = useState<string>(SYMBOLS[0].code);
-    const [selectedTimeframe, setSelectedTimeframe] = useState<Timeframe>('H4');
+    const [selectedSymbol, setSelectedSymbol] = useState<string>(() =>
+        localStorage.getItem('selected_symbol') || SYMBOLS[0].code
+    );
+    const [selectedTimeframe, setSelectedTimeframe] = useState<Timeframe>(() =>
+        (localStorage.getItem('selected_timeframe') as Timeframe) || 'H4'
+    );
     const [klineData, setKlineData] = useState<TimeframeData | null>(null);
-    const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+    const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(() => {
+        const saved = localStorage.getItem('analysis_result');
+        if (saved) {
+            try {
+                return JSON.parse(saved);
+            } catch (e) {
+                console.error('Error parsing saved analysis result', e);
+                return null;
+            }
+        }
+        return null;
+    });
     const [loading, setLoading] = useState(false);
     const [analyzing, setAnalyzing] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -57,15 +72,32 @@ function App() {
     const [tradeDuration, setTradeDuration] = useState<'short' | 'medium'>(() =>
         (localStorage.getItem('trade_duration') as 'short' | 'medium') || 'short'
     );
+    const [cooldown, setCooldown] = useState(0);
 
     // Refs
     const chartContainerRef = useRef<HTMLDivElement>(null);
     const chartRef = useRef<IChartApi | null>(null);
     const seriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
 
-    // Update time every second
+    // Update time and cooldown every second
     useEffect(() => {
-        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+        const timer = setInterval(() => {
+            setCurrentTime(new Date());
+
+            // Check persistent cooldown
+            const endTime = localStorage.getItem('cooldown_end_time');
+            if (endTime) {
+                const remaining = Math.ceil((parseInt(endTime) - Date.now()) / 1000);
+                if (remaining > 0) {
+                    setCooldown(remaining);
+                } else {
+                    setCooldown(0);
+                    localStorage.removeItem('cooldown_end_time');
+                }
+            } else {
+                setCooldown(0);
+            }
+        }, 1000);
         return () => clearInterval(timer);
     }, []);
 
@@ -93,6 +125,22 @@ function App() {
     useEffect(() => {
         localStorage.setItem('itick_token', itickToken);
     }, [itickToken]);
+
+    useEffect(() => {
+        localStorage.setItem('selected_symbol', selectedSymbol);
+    }, [selectedSymbol]);
+
+    useEffect(() => {
+        localStorage.setItem('selected_timeframe', selectedTimeframe);
+    }, [selectedTimeframe]);
+
+    useEffect(() => {
+        if (analysisResult) {
+            localStorage.setItem('analysis_result', JSON.stringify(analysisResult));
+        } else {
+            localStorage.removeItem('analysis_result');
+        }
+    }, [analysisResult]);
 
     // Initialize chart
     const initChart = useCallback(() => {
@@ -157,6 +205,7 @@ function App() {
         }
     }, [klineData, initChart]);
 
+
     // Update chart data
     useEffect(() => {
         if (!klineData || !seriesRef.current) return;
@@ -193,6 +242,7 @@ function App() {
         setLoading(true);
         setAnalyzing(true);
         setError(null);
+        setAnalysisResult(null); // Clear old analysis immediately
 
         try {
             // Fetch data first
@@ -214,6 +264,13 @@ function App() {
         } finally {
             setLoading(false);
             setAnalyzing(false);
+
+            // Set cooldown until next minute boundary
+            const now = new Date();
+            const secondsUntilNextMinute = 60 - now.getSeconds();
+            const endTime = Date.now() + secondsUntilNextMinute * 1000;
+            localStorage.setItem('cooldown_end_time', endTime.toString());
+            setCooldown(secondsUntilNextMinute);
         }
     };
 
@@ -477,12 +534,16 @@ function App() {
                     <button
                         className="btn-gold"
                         onClick={handleAnalyze}
-                        disabled={loading || analyzing || !itickToken || !(geminiApiKey || deepseekApiKey || groqApiKey)}
+                        disabled={loading || analyzing || cooldown > 0 || !itickToken || !(geminiApiKey || deepseekApiKey || groqApiKey)}
                     >
                         {loading || analyzing ? (
                             <span className="loading-text">
                                 <span className="spinner"></span>
                                 กำลังวิเคราะห์...
+                            </span>
+                        ) : cooldown > 0 ? (
+                            <span className="loading-text">
+                                ⏳ รอคูลดาวน์ ({cooldown}s)
                             </span>
                         ) : (
                             <>⚡ เริ่มวิเคราะห์</>
@@ -557,11 +618,11 @@ function App() {
                                     </div>
                                 </div>
 
-                                {/* 4. AI Volume Check Row */}
+                                {/* 4. AI Volume Check Row 
                                 <div className="volume-check-row">
                                     <span className="volume-check-label">AI VOLUME CHECK</span>
                                     <span className="volume-check-status analyzing">Analyzing...</span>
-                                </div>
+                                </div>*/}
 
                                 {/* 5. Recommendation Card (Neon Purple) */}
                                 <div className="feature-card-premium neon-purple">
@@ -591,13 +652,13 @@ function App() {
                                 <div className="sltp-grid-premium">
                                     <div className="feature-card-premium neon-red">
                                         <div className="card-label-premium red">จุดตัดขาดทุน (SL)</div>
-                                        <div className="card-value-medium-premium white">
+                                        <div className="card-value-medium-premium red">
                                             {formatPrice(analysisResult.signal.stopLoss)}
                                         </div>
                                     </div>
                                     <div className="feature-card-premium neon-green">
                                         <div className="card-label-premium green">จุดทำกำไร (TP)</div>
-                                        <div className="card-value-medium-premium white">
+                                        <div className="card-value-medium-premium green">
                                             {formatPrice(analysisResult.signal.takeProfit)}
                                         </div>
                                     </div>
