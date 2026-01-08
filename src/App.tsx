@@ -730,7 +730,7 @@ function App() {
                                         <div className="zone-label-dark">โซนรอ BUY (Demand)</div>
                                         <div className="zone-value-dark green">
                                             {analysisResult.keyLevels.support.length > 0
-                                                ? `${formatPrice(analysisResult.keyLevels.support[0])}-${formatPrice(analysisResult.keyLevels.support[1] || analysisResult.keyLevels.support[0])}`
+                                                ? `${formatPrice(analysisResult.keyLevels.support[0])} - ${formatPrice(analysisResult.keyLevels.support[1] || analysisResult.keyLevels.support[0])}`
                                                 : '-'}
                                         </div>
                                     </div>
@@ -738,7 +738,7 @@ function App() {
                                         <div className="zone-label-dark">โซนรอ SELL (Supply)</div>
                                         <div className="zone-value-dark red">
                                             {analysisResult.keyLevels.resistance.length > 0
-                                                ? `${formatPrice(analysisResult.keyLevels.resistance[0])}-${formatPrice(analysisResult.keyLevels.resistance[1] || analysisResult.keyLevels.resistance[0])}`
+                                                ? `${formatPrice(analysisResult.keyLevels.resistance[0])} - ${formatPrice(analysisResult.keyLevels.resistance[1] || analysisResult.keyLevels.resistance[0])}`
                                                 : '-'}
                                         </div>
                                     </div>

@@ -1319,9 +1319,12 @@ body {
 }
 
 .zone-value-dark {
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 800;
   font-family: var(--font-mono);
+  line-height: 1.4;
+  word-break: break-word;
+  display: block;
 }
 
 .zone-value-dark.green {
