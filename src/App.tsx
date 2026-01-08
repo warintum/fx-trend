@@ -665,13 +665,28 @@ function App() {
 
                                 {/* 3. Main Action Box & Confidence Card */}
                                 <div className="signal-action-row">
-                                    <div className={`signal-action-box ${analysisResult.signal.type.toLowerCase()}`}>
-                                        {analysisResult.signal.type === 'WAIT'
-                                            ? 'ไม่แนะนำให้เข้าตรงนี้'
-                                            : analysisResult.signal.type === 'BUY'
-                                                ? '🟢 BUY - แนะนำซื้อ'
-                                                : '🔴 SELL - แนะนำขาย'}
-                                    </div>
+                                    {(() => {
+                                        const currentPrice = analysisResult.currentPrice || analysisResult.signal.entryPrice;
+                                        const entryPrice = analysisResult.signal.entryPrice;
+                                        const priceDiffPercent = Math.abs(currentPrice - entryPrice) / currentPrice;
+                                        const isAtEntry = priceDiffPercent < 0.0004;
+
+                                        if (analysisResult.signal.type === 'WAIT' || !isAtEntry) {
+                                            return (
+                                                <div className="signal-action-box wait">
+                                                    ไม่แนะนำให้เข้าตรงนี้
+                                                </div>
+                                            );
+                                        }
+
+                                        return (
+                                            <div className={`signal-action-box ${analysisResult.signal.type.toLowerCase()}`}>
+                                                {analysisResult.signal.type === 'BUY'
+                                                    ? '🟢 BUY - แนะนำเข้าซื้อ'
+                                                    : '🔴 SELL - แนะนำเข้าขาย'}
+                                            </div>
+                                        );
+                                    })()}
                                     <div className="confidence-card-premium">
                                         <div className="confidence-label-premium">CONFIDENCE</div>
                                         <div className="confidence-value-premium">{analysisResult.signal.confidence}%</div>
@@ -699,7 +714,7 @@ function App() {
 
                                 {/* 6. Entry Card (Neon Blue) */}
                                 <div className="feature-card-premium neon-blue">
-                                    <div className="card-label-premium blue">จุดเข้าปัจจุบัน</div>
+                                    <div className="card-label-premium blue">ราคาปัจจุบัน</div>
                                     <div className="card-content-premium">
                                         <span className="card-value-large-premium">
                                             {formatPrice(analysisResult.currentPrice || analysisResult.signal.entryPrice)}
