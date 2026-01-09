@@ -19,7 +19,7 @@ function formatKlineForPrompt(data: KlineData[], timeframe: string): string {
     return `[${timeframe}]\n${formatted}`;
 }
 
-function buildAnalysisPrompt(symbol: string, data: TimeframeAnalysisData, duration: 'short' | 'medium'): string {
+function buildAnalysisPrompt(symbol: string, data: TimeframeAnalysisData, duration: 'short' | 'medium', modelVersion: string): string {
     const m5Text = formatKlineForPrompt(data.M5, 'M5');
     const m30Text = formatKlineForPrompt(data.M30, 'M30');
     const h1Text = formatKlineForPrompt(data.H1, 'H1');
@@ -59,8 +59,23 @@ function buildAnalysisPrompt(symbol: string, data: TimeframeAnalysisData, durati
 - \`support\` และ \`resistance\` ใน JSON ต้องเป็น **Array ของตัวเลข 2 ตัว** ที่แสดงถึง **ช่วงราคาที่กว้างพอ (ขอบบนและขอบล่าง)** เสมอ เช่น [2410.50, 2400.00] **ห้ามใส่ตัวเลขเดียวกัน** และ **ห้ามเขียนตัวเลขต่อกันเด็ดขาด** (ต้องมีคอมม่าคั่น) โซนควรมีความกว้างประมาณ 1.0 - 3.0 points สำหรับทองคำ **ต้องคำนวณและใส่ราคาจริง ห้ามใส่ [0.0, 0.0] โดยเด็ดขาด**
     `;
 
+    const liteInstructions = `
+🚀 **คำสั่งพิเศษสำหรับรุ่น LITE (ห้ามฝ่าฝืน):**
+- คุณต้องให้ความสำคัญกับ **H1 Trend (${trendText})** เป็นอันดับหนึ่ง
+- **กฎเหล็ก:** ห้ามแนะนำ SELL หากเทรนด์หลักเป็นขาขึ้น และห้ามแนะนำ BUY หากเทรนด์หลักเป็นขาลง หากราคาสวนเทรนด์แรงเกินไป ให้เลือก "WAIT" เท่านั้น
+- **ห้ามเดา:** หากราคาไม่อยู่ในโซน Demand/Supply ที่ชัดเจน ให้เลือกประเภทสัญญาณเป็น "WAIT" เสมอ
+    `;
+
+    const finalPrompt = `
+${modelVersion.includes('lite') ? liteInstructions : ''}
+    
+🎯 **วิเคราะห์ตลาด ${symbol} สำหรับการเทรด ${duration === 'short' ? 'Scalping (1 ชม.)' : 'Day Trade (วันนี้)'}**
+    
+${commonInstructions}
+    `;
+
     if (duration === 'short') {
-        return `${commonInstructions}
+        return `${finalPrompt}
 🎯 **สไตล์การเทรด: SCALPING (10-60 นาที)**
 - วิเคราะห์ M30 และ M5 เป็นหลักเพื่อหาจุดเข้าสั้นๆ โดยต้องสอดคล้องกับ H1
 - SL แคบ: 10-30 pips
@@ -75,7 +90,7 @@ ${m5Text}
 ตอบเป็น JSON (reasoning ต้องอธิบายความสัมพันธ์ของ HTF และ LTF):
 {"currentPrice":${latestPrice.toFixed(2)},"trend":"BULLISH|BEARISH|SIDEWAYS","structure":"วิเคราะห์โครงสร้างตลาด สังเกต Higher High/Low หรือ Lower High/Low","keyLevels":{"support":[2410.0,2400.0],"resistance":[2420.0,2430.0]},"signal":{"type":"BUY|SELL|WAIT","entryPrice":2405.0,"stopLoss":2395.0,"takeProfit":2425.0,"confidence":75,"reasoning":"อธิบายเหตุผล 4-6 ประโยค..."},"summary":"สรุปแผน Scalping เข้า-ออกเร็ว"}`;
     } else {
-        return `${commonInstructions}
+        return `${finalPrompt}
 🎯 **สไตล์การเทรด: DAY TRADE (2-8 ชั่วโมง)**
 - เน้นเทรนด์ H4 และ H1 เป็นหลัก ค้นหาจุดเข้าจากการย่อตัวใน M30
 - SL กว้างขึ้น: 30-80 pips
@@ -117,9 +132,52 @@ function parseAnalysisResponse(responseText: string): AnalysisResult {
         jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
     }
 
+    // --- Robust Fixes for Gemini Typo Hallucinations ---
+    // Fix 1: Gemini sometimes puts ] ] instead of ] } at the end of keyLevels
+    jsonStr = jsonStr.replace(/\]\s*\]\s*$/, ' ] }');
+    // Fix 2: Gemini sometimes omits commas between major objects
+    jsonStr = jsonStr.replace(/\}\s*\"signal\"/g, '}, "signal"');
+    jsonStr = jsonStr.replace(/\}\s*\"summary\"/g, '}, "summary"');
+    // Fix 3: Handle obvious truncation - if it ends with "summary": "...", but missing last brace
+    if (jsonStr.includes('"summary":') && !jsonStr.trim().endsWith('}')) {
+        jsonStr += ' }';
+    }
+
     try {
         const parsed = JSON.parse(jsonStr) as AnalysisResult;
-        console.log('[Gemini] Parsed successfully:', parsed);
+
+        // --- Self-Healing: Fix Zero Values for Entry/SL/TP ---
+        if (parsed.signal) {
+            const s = parsed.signal;
+            const sup = parsed.keyLevels?.support || [];
+            const res = parsed.keyLevels?.resistance || [];
+
+            // If Entry is 0 but we are waiting/trading, pick from zones
+            if (s.entryPrice === 0) {
+                if (s.type.includes('BUY') && sup.length > 0) s.entryPrice = sup[0];
+                else if (s.type.includes('SELL') && res.length > 0) s.entryPrice = res[0];
+                else s.entryPrice = parsed.currentPrice;
+            }
+
+            // If SL is 0, calculate a safe distance
+            if (s.stopLoss === 0 && s.entryPrice > 0) {
+                const distance = s.entryPrice * 0.005; // 0.5% default if unknown
+                if (s.type.includes('BUY')) {
+                    s.stopLoss = sup.length > 1 ? sup[1] : s.entryPrice - distance;
+                } else {
+                    s.stopLoss = res.length > 1 ? res[1] : s.entryPrice + distance;
+                }
+            }
+
+            // If TP is 0, calculate 1:1.5 RR
+            if (s.takeProfit === 0 && s.entryPrice > 0 && s.stopLoss > 0) {
+                const risk = Math.abs(s.entryPrice - s.stopLoss);
+                if (s.type.includes('BUY')) s.takeProfit = s.entryPrice + (risk * 1.5);
+                else s.takeProfit = s.entryPrice - (risk * 1.5);
+            }
+        }
+
+        console.log('[Gemini] Parsed and Fixed successfully:', parsed);
         return parsed;
     } catch (err) {
         // Return a default result if parsing fails
@@ -147,12 +205,13 @@ export async function analyzeMarket(
     apiKey: string,
     symbol: string,
     data: TimeframeAnalysisData,
-    duration: 'short' | 'medium' = 'short'
+    duration: 'short' | 'medium' = 'short',
+    modelVersion: string = 'gemini-3-flash-preview'
 ): Promise<AnalysisResult> {
     const genAI = new GoogleGenerativeAI(apiKey);
-    // Use gemini-3-flash-preview - latest Gemini 3 Flash model
+    // Use the specified model version
     const model = genAI.getGenerativeModel({
-        model: 'gemini-3-flash-preview',
+        model: modelVersion,
         generationConfig: {
             temperature: 0.5,  // Lower for more consistent output
             topP: 0.9,
@@ -162,7 +221,7 @@ export async function analyzeMarket(
         },
     });
 
-    const prompt = buildAnalysisPrompt(symbol, data, duration);
+    const prompt = buildAnalysisPrompt(symbol, data, duration, modelVersion);
 
     try {
         const result = await model.generateContent(prompt);

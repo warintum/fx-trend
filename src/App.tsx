@@ -11,6 +11,7 @@ import { analyzeMarket as analyzeGemini } from './services/geminiApi';
 import { analyzeMarketWithDeepSeek as analyzeDeepSeek } from './services/deepseekApi';
 import { analyzeMarketWithGroq as analyzeGroq } from './services/groqApi';
 import { sanitizeAnalysisResult } from './utils/analysisFixer';
+import { getTechnicalConsensus } from './utils/technicalIndicators';
 import { formatPrice } from './utils/formatters';
 import './index.css';
 
@@ -20,14 +21,6 @@ type TimeframeData = {
     H1: KlineData[];
     H4: KlineData[];
 };
-
-// Mock ticker data
-/*const TICKER_DATA = [
-    { icon: '💱', name: 'EUR/USD', price: '1.16837', change: '-0.00 (-0.04%)', isPositive: false },
-    { icon: '📊', name: 'DXY Index', price: '98.595', change: '-0.237 (-0.24%)', isPositive: false },
-    { icon: '🪙', name: 'Gold', price: '4,471.155', change: '-23.48 (-0.52%)', isPositive: false },
-    { icon: '💹', name: 'BTC', price: '92,721', change: '-989.00', isPositive: false },
-];*/
 
 function App() {
     // State
@@ -47,6 +40,9 @@ function App() {
     });
     const [selectedGeminiIndex, setSelectedGeminiIndex] = useState(() =>
         parseInt(localStorage.getItem('selected_gemini_index') || '0')
+    );
+    const [geminiVersion, setGeminiVersion] = useState(() =>
+        localStorage.getItem('gemini_version') || 'gemini-3-flash-preview'
     );
     const [deepseekApiKey, setDeepseekApiKey] = useState(() =>
         localStorage.getItem('deepseek_api_key') || ''
@@ -138,6 +134,10 @@ function App() {
     useEffect(() => {
         localStorage.setItem('selected_gemini_index', selectedGeminiIndex.toString());
     }, [selectedGeminiIndex]);
+
+    useEffect(() => {
+        localStorage.setItem('gemini_version', geminiVersion);
+    }, [geminiVersion]);
 
     useEffect(() => {
         localStorage.setItem('deepseek_api_key', deepseekApiKey);
@@ -294,14 +294,19 @@ function App() {
             // Then analyze using selected provider with trade duration
             let result;
             if (aiProvider === 'gemini') {
-                result = await analyzeGemini(geminiApiKeys[selectedGeminiIndex], selectedSymbol, data, tradeDuration);
+                result = await analyzeGemini(geminiApiKeys[selectedGeminiIndex], selectedSymbol, data, tradeDuration, geminiVersion);
             } else if (aiProvider === 'deepseek') {
                 result = await analyzeDeepSeek(deepseekApiKey, selectedSymbol, data, tradeDuration);
             } else {
                 result = await analyzeGroq(groqApiKeys[selectedGroqIndex], selectedSymbol, data, tradeDuration);
             }
-            // Sanitize the result to fix fused numbers or other AI quirks
-            const sanitizedResult = sanitizeAnalysisResult(result);
+
+            // Calculate Technical H1 Trend to enforce consistency
+            const h1Consensus = getTechnicalConsensus(data.H1);
+            const technicalTrend = h1Consensus.trend;
+
+            // Sanitize the result to fix fused numbers or other AI quirks, and enforce trend
+            const sanitizedResult = sanitizeAnalysisResult(result, technicalTrend);
             setAnalysisResult(sanitizedResult);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
@@ -346,20 +351,6 @@ function App() {
 
     return (
         <>
-            {/* Ticker Bar 
-            <div className="ticker-bar">
-                {TICKER_DATA.map((item, i) => (
-                    <div key={i} className="ticker-item">
-                        <span className="ticker-icon">{item.icon}</span>
-                        <span className="ticker-name">{item.name}</span>
-                        <span className="ticker-price">{item.price}</span>
-                        <span className={`ticker-change ${item.isPositive ? 'positive' : 'negative'}`}>
-                            {item.change}
-                        </span>
-                    </div>
-                ))}
-            </div>*/}
-
             {/* Header */}
             <header className="header">
                 <div className="header-left">
@@ -409,12 +400,6 @@ function App() {
                                     >
                                         🔮 Gemini
                                     </button>
-                                    {/* <button
-                                        className={`lang-btn ${aiProvider === 'deepseek' ? 'active' : ''}`}
-                                        onClick={() => setAiProvider('deepseek')}
-                                    >
-                                        🐋 DeepSeek
-                                    </button> */}
                                     <button
                                         className={`lang-btn ${aiProvider === 'groq' ? 'active' : ''}`}
                                         onClick={() => setAiProvider('groq')}
@@ -424,32 +409,59 @@ function App() {
                                 </div>
                             </div>
 
-                            {/* Gemini Slot Selector */}
+                            {/* Gemini Slot & Version Selector */}
                             {aiProvider === 'gemini' && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '4px' }}>
-                                    <span style={{ fontSize: '0.7rem', color: '#7a7a85' }}>Slot:</span>
-                                    <div style={{ display: 'flex', gap: '4px' }}>
-                                        {[0, 1, 2, 3, 4].map((idx) => (
-                                            <button
-                                                key={idx}
-                                                onClick={() => setSelectedGeminiIndex(idx)}
-                                                style={{
-                                                    width: '24px',
-                                                    height: '24px',
-                                                    borderRadius: '4px',
-                                                    border: '1px solid',
-                                                    borderColor: selectedGeminiIndex === idx ? '#f5a623' : '#3a3a45',
-                                                    background: selectedGeminiIndex === idx ? 'rgba(245, 166, 35, 0.1)' : '#1a1a20',
-                                                    color: selectedGeminiIndex === idx ? '#f5a623' : '#a0a0a8',
-                                                    fontSize: '0.7rem',
-                                                    cursor: 'pointer',
-                                                    transition: 'all 0.2s',
-                                                    fontWeight: 'bold'
-                                                }}
-                                            >
-                                                {idx + 1}
-                                            </button>
-                                        ))}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingLeft: '4px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span style={{ fontSize: '0.7rem', color: '#7a7a85' }}>Slot:</span>
+                                        <div style={{ display: 'flex', gap: '4px' }}>
+                                            {[0, 1, 2, 3, 4].map((idx) => (
+                                                <button
+                                                    key={idx}
+                                                    onClick={() => setSelectedGeminiIndex(idx)}
+                                                    style={{
+                                                        width: '24px',
+                                                        height: '24px',
+                                                        borderRadius: '4px',
+                                                        border: '1px solid',
+                                                        borderColor: selectedGeminiIndex === idx ? '#f5a623' : '#3a3a45',
+                                                        background: selectedGeminiIndex === idx ? 'rgba(245, 166, 35, 0.1)' : '#1a1a20',
+                                                        color: selectedGeminiIndex === idx ? '#f5a623' : '#a0a0a8',
+                                                        fontSize: '0.7rem',
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.2s',
+                                                        fontWeight: 'bold'
+                                                    }}
+                                                >
+                                                    {idx + 1}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span style={{ fontSize: '0.7rem', color: '#7a7a85' }}>Ver:</span>
+                                        <div style={{ display: 'flex', gap: '4px' }}>
+                                            {['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'].map((v) => (
+                                                <button
+                                                    key={v}
+                                                    onClick={() => setGeminiVersion(v)}
+                                                    style={{
+                                                        padding: '2px 6px',
+                                                        borderRadius: '4px',
+                                                        border: '1px solid',
+                                                        borderColor: geminiVersion === v ? '#f5a623' : '#3a3a45',
+                                                        background: geminiVersion === v ? 'rgba(245, 166, 35, 0.1)' : '#1a1a20',
+                                                        color: geminiVersion === v ? '#f5a623' : '#a0a0a8',
+                                                        fontSize: '0.65rem',
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.2s',
+                                                        whiteSpace: 'nowrap'
+                                                    }}
+                                                >
+                                                    {v.replace('gemini-', '')}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
                             )}
@@ -622,18 +634,12 @@ function App() {
                                 <button
                                     key={tab.id}
                                     className={`tf-tab ${selectedTimeframe === tab.id ? 'active' : ''}`}
-                                    onClick={() => {
-                                        if (['M5', 'M30', 'H1', 'H4'].includes(tab.id)) {
-                                            setSelectedTimeframe(tab.id as Timeframe);
-                                        }
-                                    }}
+                                    onClick={() => setSelectedTimeframe(tab.id)}
                                 >
                                     {tab.label}
                                 </button>
                             ))}
                         </div>
-
-
 
                         {/* Chart */}
                         {klineData && (
@@ -760,74 +766,78 @@ function App() {
                                             </div>
                                         );
                                     })()}
+
                                     <div className="confidence-card-premium">
-                                        <div className="confidence-label-premium">CONFIDENCE</div>
-                                        <div className="confidence-value-premium">{analysisResult.signal.confidence}%</div>
+                                        <span className="confidence-label-premium">CONFIDENCE</span>
+                                        <span className="confidence-value-premium">{analysisResult.signal.confidence}%</span>
                                     </div>
                                 </div>
 
-                                {/* 4. AI Volume Check Row 
-                                <div className="volume-check-row">
-                                    <span className="volume-check-label">AI VOLUME CHECK</span>
-                                    <span className="volume-check-status analyzing">Analyzing...</span>
-                                </div>*/}
-
-                                {/* 5. Recommendation Card (Neon Purple) */}
-                                <div className="feature-card-premium neon-purple">
-                                    <div className="card-label-premium purple">โซนแนะนำ / รอเข้า</div>
-                                    <div className="card-content-premium">
-                                        <span className="card-value-premium">
-                                            {analysisResult.signal.type === 'WAIT'
-                                                ? `Wait ${analysisResult.signal.entryPrice < (analysisResult.currentPrice || 0) ? 'BUY' : 'SELL'} Limit at ${formatPrice(analysisResult.signal.entryPrice)}`
-                                                : `${analysisResult.signal.type} at ${formatPrice(analysisResult.signal.entryPrice)}`}
-                                        </span>
-                                        <span className="card-icon-premium">🗺️</span>
-                                    </div>
-                                </div>
-
-                                {/* 6. Entry Card (Neon Blue) */}
-                                <div className="feature-card-premium neon-blue">
-                                    <div className="card-label-premium blue">ราคาปัจจุบัน</div>
-                                    <div className="card-content-premium">
-                                        <span className="card-value-large-premium">
-                                            {formatPrice(analysisResult.currentPrice || analysisResult.signal.entryPrice)}
-                                        </span>
-                                        <span className="card-icon-premium highlight">🎯</span>
-                                    </div>
-                                </div>
-
-                                {/* 7. SL/TP Grid (Neon Red/Green) */}
-                                <div className="sltp-grid-premium">
-                                    <div className="feature-card-premium neon-red">
-                                        <div className="card-label-premium red">จุดตัดขาดทุน (SL)</div>
-                                        <div className="card-value-medium-premium red">
-                                            {formatPrice(analysisResult.signal.stopLoss)}
+                                {/* 4. Feature Cards & Levels Grid */}
+                                <div className="analysis-section" style={{ gap: '10px' }}>
+                                    {/* Recommendation Card */}
+                                    <div className="feature-card-premium neon-purple">
+                                        <div className="card-label-premium purple">โซนแนะนำ / รอเข้า</div>
+                                        <div className="card-content-premium">
+                                            <div className="card-value-medium-premium gold-scaled">
+                                                {analysisResult.signal.type === 'WAIT' ? (
+                                                    `Wait ${analysisResult.signal.entryPrice < analysisResult.currentPrice ? 'BUY' : 'SELL'} Limit at ${formatPrice(analysisResult.signal.entryPrice)}`
+                                                ) : (
+                                                    `${analysisResult.signal.type} at ${formatPrice(analysisResult.signal.entryPrice)}`
+                                                )}
+                                            </div>
+                                            <span className="card-icon-premium">🗺️</span>
                                         </div>
                                     </div>
-                                    <div className="feature-card-premium neon-green">
-                                        <div className="card-label-premium green">จุดทำกำไร (TP)</div>
-                                        <div className="card-value-medium-premium green">
-                                            {formatPrice(analysisResult.signal.takeProfit)}
-                                        </div>
-                                    </div>
-                                </div>
 
-                                {/* 8. Demand/Supply Grid */}
-                                <div className="zones-grid-premium">
-                                    <div className="zone-box-dark">
-                                        <div className="zone-label-dark">โซนรอ BUY (Demand)</div>
-                                        <div className="zone-value-dark green">
-                                            {analysisResult.keyLevels.support.length > 0
-                                                ? `${formatPrice(analysisResult.keyLevels.support[0])}-${formatPrice(analysisResult.keyLevels.support[1] || analysisResult.keyLevels.support[0])}`
-                                                : '-'}
+                                    {/* Current Price Card */}
+                                    <div className="feature-card-premium neon-blue">
+                                        <div className="card-label-premium blue">ราคาปัจจุบัน</div>
+                                        <div className="card-content-premium">
+                                            <div className="card-value-large-premium blue-scaled">
+                                                {formatPrice(analysisResult.currentPrice)}
+                                            </div>
+                                            <span className="card-icon-premium highlight">🎯</span>
                                         </div>
                                     </div>
-                                    <div className="zone-box-dark">
-                                        <div className="zone-label-dark">โซนรอ SELL (Supply)</div>
-                                        <div className="zone-value-dark red">
-                                            {analysisResult.keyLevels.resistance.length > 0
-                                                ? `${formatPrice(analysisResult.keyLevels.resistance[0])}-${formatPrice(analysisResult.keyLevels.resistance[1] || analysisResult.keyLevels.resistance[0])}`
-                                                : '-'}
+
+                                    {/* SL / TP Row */}
+                                    <div className="sltp-grid-premium">
+                                        <div className="feature-card-premium neon-red">
+                                            <div className="card-label-premium red">จุดตัดขาดทุน (SL)</div>
+                                            <div className="card-value-medium-premium red">
+                                                {formatPrice(analysisResult.signal.stopLoss)}
+                                            </div>
+                                        </div>
+                                        <div className="feature-card-premium neon-green">
+                                            <div className="card-label-premium green">จุดทำกำไร (TP)</div>
+                                            <div className="card-value-medium-premium green">
+                                                {formatPrice(analysisResult.signal.takeProfit)}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Demand / Supply Zone Row */}
+                                    <div className="zones-grid-premium">
+                                        <div className="zone-box-dark">
+                                            <div className="zone-label-dark">โซนรอ BUY (Demand)</div>
+                                            <span className="zone-value-dark green">
+                                                {analysisResult.keyLevels.support.length >= 2 ? (
+                                                    `${formatPrice(analysisResult.keyLevels.support[0])}-${formatPrice(analysisResult.keyLevels.support[1])}`
+                                                ) : (
+                                                    formatPrice(analysisResult.keyLevels.support[0] || 0)
+                                                )}
+                                            </span>
+                                        </div>
+                                        <div className="zone-box-dark">
+                                            <div className="zone-label-dark">โซนรอ SELL (Supply)</div>
+                                            <span className="zone-value-dark red">
+                                                {analysisResult.keyLevels.resistance.length >= 2 ? (
+                                                    `${formatPrice(analysisResult.keyLevels.resistance[0])}-${formatPrice(analysisResult.keyLevels.resistance[1])}`
+                                                ) : (
+                                                    formatPrice(analysisResult.keyLevels.resistance[0] || 0)
+                                                )}
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
@@ -835,20 +845,12 @@ function App() {
                         )}
                     </div>
                 </div>
-            </main >
+            </main>
 
             {/* Footer */}
-            < footer className="footer" >
-                <p>
-                    Built with ❤️ using{' '}
-                    <a href="https://itick.org" target="_blank" rel="noopener noreferrer">iTick API</a>
-                    {' + '}
-                    <a href="https://ai.google.dev" target="_blank" rel="noopener noreferrer">Gemini AI</a>
-                    {' + '}
-                    <a href="https://console.groq.com" target="_blank" rel="noopener noreferrer">Groq AI</a>
-                    {' • '}© 2026 FX Trend Analyzer • Not financial advice
-                </p>
-            </footer >
+            <footer className="footer">
+                Built with ❤️ using iTick API + Gemini AI + Groq AI • © 2026 FX Trend Analyzer • Not financial advice
+            </footer>
         </>
     );
 }

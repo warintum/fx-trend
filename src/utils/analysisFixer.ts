@@ -2,8 +2,10 @@ import { AnalysisResult } from '../types';
 
 /**
  * Sanitizes the analysis result to handle common AI failures like fused numbers.
+ * @param result The raw analysis result from AI
+ * @param h1Trend Optional H1 trend to enforce (from technical calculation)
  */
-export function sanitizeAnalysisResult(result: AnalysisResult): AnalysisResult {
+export function sanitizeAnalysisResult(result: AnalysisResult, h1Trend?: 'UP' | 'DOWN' | 'SIDEWAYS'): AnalysisResult {
     const sanitized = { ...result };
     const currentPrice = result.currentPrice || 0;
 
@@ -13,8 +15,8 @@ export function sanitizeAnalysisResult(result: AnalysisResult): AnalysisResult {
         resistance: sanitizePriceArray(result.keyLevels.resistance, currentPrice),
     };
 
-    // Smart Signal Correction (Fix Hallucinations)
-    return correctSignalDirection(sanitized);
+    // Smart Signal Correction (Fix Hallucinations & Enforce Trend)
+    return correctSignalDirection(sanitized, h1Trend);
 }
 
 /**
@@ -93,7 +95,7 @@ function sanitizePriceArray(prices: number[], currentPrice: number): number[] {
  * If Entry is near Support -> Should be BUY.
  * If Entry is near Resistance -> Should be SELL.
  */
-function correctSignalDirection(result: AnalysisResult): AnalysisResult {
+function correctSignalDirection(result: AnalysisResult, h1Trend?: 'UP' | 'DOWN' | 'SIDEWAYS'): AnalysisResult {
     const { signal, keyLevels, currentPrice } = result;
     const { entryPrice } = signal;
     const { support, resistance } = keyLevels;
@@ -110,6 +112,7 @@ function correctSignalDirection(result: AnalysisResult): AnalysisResult {
 
     let correctedType = signal.type;
 
+    // --- 1. Zone Bias Correction ---
     // If significantly closer to Support than Resistance -> Bias BUY
     if (distToSupport < distToResistance * 0.5) {
         correctedType = 'BUY';
@@ -119,18 +122,34 @@ function correctSignalDirection(result: AnalysisResult): AnalysisResult {
         correctedType = 'SELL';
     }
     // If ambiguous, trust the original OR check against current price location
-    // (e.g. if below current price significantly -> Buy Limit?)
     else {
-        // Fallback: If AI says "WAIT", guess based on relative position
         if (signal.type === 'WAIT') {
             if (entryPrice < currentPrice) correctedType = 'BUY'; // Buy Dip / Buy Limit
             else correctedType = 'SELL'; // Sell Rally / Sell Limit
         }
     }
 
+    // --- 2. Trend Enforcement Logic (Mathematical Filter) ---
+    // If H1 Trend is UP, block aggressive SELL at current price
+    if (h1Trend === 'UP' && correctedType === 'SELL') {
+        const isCounterTrend = entryPrice >= currentPrice * 0.999; // If SELL at or above 99.9% of current price
+        if (isCounterTrend) {
+            console.log(`[TrendEnforcement] Blocking SELL signal during H1 UP trend.`);
+            correctedType = 'WAIT';
+        }
+    }
+    // If H1 Trend is DOWN, block aggressive BUY at current price
+    else if (h1Trend === 'DOWN' && correctedType === 'BUY') {
+        const isCounterTrend = entryPrice <= currentPrice * 1.001; // If BUY at or below 100.1% of current price
+        if (isCounterTrend) {
+            console.log(`[TrendEnforcement] Blocking BUY signal during H1 DOWN trend.`);
+            correctedType = 'WAIT';
+        }
+    }
+
     // Force correction if different
     if (correctedType !== signal.type) {
-        console.log(`[SmartFixer] Corrected Signal Type from ${signal.type} to ${correctedType}`);
+        console.log(`[SmartFixer] Corrected Signal Type from ${signal.type} to ${correctedType} (Trend: ${h1Trend})`);
         signal.type = correctedType as 'BUY' | 'SELL' | 'WAIT';
     }
 

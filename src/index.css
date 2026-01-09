@@ -1205,10 +1205,15 @@ body {
 }
 
 .card-value-large-premium {
-  font-size: 2rem;
+  font-size: 2.2rem;
   font-weight: 800;
   color: #fff;
   font-family: var(--font-mono);
+}
+
+.card-value-large-premium.blue-scaled {
+  font-size: 1.4rem;
+  color: #06b6d4;
 }
 
 .card-value-large-premium.blue {
@@ -1219,6 +1224,11 @@ body {
   font-size: 1.2rem;
   font-weight: 800;
   font-family: var(--font-mono);
+}
+
+.card-value-medium-premium.gold-scaled {
+  font-size: 1.45rem;
+  color: #f5a623;
 }
 
 .card-value-medium-premium.purple {
@@ -1255,6 +1265,7 @@ body {
   border: 1px solid rgba(168, 85, 247, 0.3);
   border-left: 5px solid #a855f7;
   box-shadow: inset 5px 0 15px rgba(168, 85, 247, 0.1);
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.12), #0d0d0f);
 }
 
 .card-label-premium.purple {
@@ -1265,6 +1276,7 @@ body {
   border: 1px solid rgba(6, 182, 212, 0.3);
   border-left: 5px solid #06b6d4;
   box-shadow: inset 5px 0 15px rgba(6, 182, 212, 0.1);
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.12), #0d0d0f);
 }
 
 .card-label-premium.blue {
@@ -1392,4 +1404,116 @@ body {
   .current-price-value {
     font-size: 1.5rem;
   }
+}
+
+/* ========================================
+   Premium Levels Grid Styles
+   ======================================== */
+.levels-grid-premium {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 16px;
+}
+
+@media (min-width: 640px) {
+  .levels-grid-premium {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .levels-grid-premium {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.level-card-premium {
+  background: #0d0d0f;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.level-card-premium:hover {
+  border-color: rgba(245, 166, 35, 0.2);
+  background: #111114;
+}
+
+.level-card-premium.zone {
+  grid-column: span 2;
+  background: linear-gradient(135deg, rgba(245, 166, 35, 0.08), transparent);
+  border-color: rgba(245, 166, 35, 0.15);
+}
+
+.level-card-premium.entry {
+  grid-column: span 2;
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.08), transparent);
+  border-color: rgba(6, 182, 212, 0.15);
+}
+
+.level-card-premium.sl {
+  border-left: 3px solid var(--accent-red);
+}
+
+.level-card-premium.tp {
+  border-left: 3px solid var(--accent-green);
+}
+
+.level-card-premium.demand {
+  border-left: 3px solid var(--accent-green);
+  background: rgba(34, 197, 94, 0.03);
+}
+
+.level-card-premium.supply {
+  border-left: 3px solid var(--accent-red);
+  background: rgba(239, 68, 68, 0.03);
+}
+
+.level-header-premium {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.level-icon-premium {
+  font-size: 0.9rem;
+}
+
+.level-label-premium {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.level-card-premium.sl .level-label-premium {
+  color: var(--accent-red);
+}
+
+.level-card-premium.tp .level-label-premium {
+  color: var(--accent-green);
+}
+
+.level-value-premium {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #fff;
+  font-family: var(--font-mono);
+  letter-spacing: -0.02em;
+}
+
+.level-card-premium.zone .level-value-premium {
+  font-size: 1.2rem;
+  color: var(--accent-gold);
+}
+
+.level-card-premium.entry .level-value-premium {
+  font-size: 1.4rem;
+  color: var(--accent-cyan);
 }
