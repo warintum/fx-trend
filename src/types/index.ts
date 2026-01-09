@@ -44,14 +44,27 @@ export interface ApiConfig {
 }
 
 export const SYMBOLS = [
-    { code: 'XAUUSD', name: 'Gold / USD', region: 'GB' },
-    { code: 'BTCUSDT', name: 'Bitcoin / USDT', region: 'GB' },
-    { code: 'ETHUSDT', name: 'Ethereum / USDT', region: 'GB' },
-    { code: 'USDJPY', name: 'USD / JPY', region: 'GB' },
-    { code: 'EURUSD', name: 'EUR / USD', region: 'GB' },
-    { code: 'GBPUSD', name: 'GBP / USD', region: 'GB' },
-    { code: 'AUDUSD', name: 'AUD / USD', region: 'GB' },
+    // Forex
+    { code: 'XAUUSD', name: 'Gold / USD', region: 'GB', category: 'forex' },
+    { code: 'USDJPY', name: 'USD / JPY', region: 'GB', category: 'forex' },
+    { code: 'EURUSD', name: 'EUR / USD', region: 'GB', category: 'forex' },
+    { code: 'GBPUSD', name: 'GBP / USD', region: 'GB', category: 'forex' },
+    { code: 'AUDUSD', name: 'AUD / USD', region: 'GB', category: 'forex' },
+
+    // Indices (Based on iTick Docs: GB region + SPX/NDX codes)
+    { code: 'SPX', name: 'S&P 500', region: 'GB', category: 'indices' },
+    { code: 'NDX', name: 'Nasdaq 100', region: 'GB', category: 'indices' },
+
+    // Crypto (Based on iTick Docs: BA region for Binance)
+    { code: 'BTCUSDT', name: 'Bitcoin / USDT', region: 'BA', category: 'crypto' },
+    { code: 'ETHUSDT', name: 'Ethereum / USDT', region: 'BA', category: 'crypto' },
+
+    // Stock (Based on User request: AAPL$US, TSLA$US)
+    { code: 'AAPL$US', name: 'Apple Inc.', region: 'US', category: 'stock' },
+    { code: 'TSLA$US', name: 'Tesla Inc.', region: 'US', category: 'stock' },
 ] as const;
+
+export type SymbolCategory = typeof SYMBOLS[number]['category'];
 
 export type SymbolCode = typeof SYMBOLS[number]['code'];
 

@@ -287,8 +287,19 @@ function App() {
         setAnalysisResult(null); // Clear old analysis immediately
 
         try {
+            // Find symbol metadata
+            const symbolInfo = SYMBOLS.find(s => s.code === selectedSymbol);
+            const region = symbolInfo?.region || 'GB';
+            const category = (symbolInfo as any)?.category || 'forex';
+
             // Fetch data first
-            const data = await getMultiTimeframeData(itickToken, selectedSymbol);
+            const data = await getMultiTimeframeData(itickToken, selectedSymbol, region, category);
+
+            // Data Guard: if no candles returned, stop and show error
+            if (!data.M5 || data.M5.length === 0) {
+                throw new Error('ไม่พบข้อมูลกราฟของสินทรัพย์นี้ในขณะนี้ (อาจเป็นช่วงตลาดปิด) กรุณาลองใหม่ภายหลังครับ');
+            }
+
             setKlineData(data);
 
             // Then analyze using selected provider with trade duration

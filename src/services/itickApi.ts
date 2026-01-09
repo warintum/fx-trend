@@ -22,9 +22,10 @@ export async function fetchKlineData(
     symbol: string,
     kType: number,
     limit: number = 100,
-    region: string = 'GB'
+    region: string = 'GB',
+    category: string = 'forex'
 ): Promise<KlineData[]> {
-    const url = `${BASE_URL}/forex/kline?region=${region}&code=${symbol}&kType=${kType}&limit=${limit}`;
+    const url = `${BASE_URL}/${category}/kline?region=${region}&code=${symbol}&kType=${kType}&limit=${limit}`;
 
     console.log('[iTick API] Fetching:', url);
 
@@ -116,23 +117,24 @@ export function aggregateToH4(h1Data: KlineData[]): KlineData[] {
 export async function getMultiTimeframeData(
     token: string,
     symbol: string,
-    region: string = 'GB'
+    region: string = 'GB',
+    category: string = 'forex'
 ): Promise<{ M5: KlineData[]; M30: KlineData[]; H1: KlineData[]; H4: KlineData[] }> {
     // Fetch all timeframes with delay to respect rate limit (5 calls/min)
     const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
     console.log('[iTick API] Starting multi-timeframe fetch for', symbol);
 
-    const m5Data = await fetchKlineData(token, symbol, KTYPE_MAP.M5, 100, region);
+    const m5Data = await fetchKlineData(token, symbol, KTYPE_MAP.M5, 100, region, category);
     console.log('[iTick API] M5 data:', m5Data.length, 'candles');
     await delay(500); // Slightly longer delay to be safe
 
-    const m30Data = await fetchKlineData(token, symbol, KTYPE_MAP.M30, 100, region);
+    const m30Data = await fetchKlineData(token, symbol, KTYPE_MAP.M30, 100, region, category);
     console.log('[iTick API] M30 data:', m30Data.length, 'candles');
     await delay(500);
 
     // Fetch more H1 data to aggregate into H4 (need 4x more for same number of H4 candles)
-    const h1Data = await fetchKlineData(token, symbol, KTYPE_MAP.H1, 200, region);
+    const h1Data = await fetchKlineData(token, symbol, KTYPE_MAP.H1, 200, region, category);
     console.log('[iTick API] H1 data:', h1Data.length, 'candles');
 
     // Aggregate H1 to H4
