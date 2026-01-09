@@ -31,8 +31,22 @@ type TimeframeData = {
 
 function App() {
     // State
-    const [geminiApiKey, setGeminiApiKey] = useState(() =>
-        localStorage.getItem('gemini_api_key') || ''
+    const [geminiApiKeys, setGeminiApiKeys] = useState<string[]>(() => {
+        const saved = localStorage.getItem('gemini_api_keys');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                if (Array.isArray(parsed) && parsed.length === 5) return parsed;
+            } catch (e) {
+                console.error('Error parsing gemini_api_keys', e);
+            }
+        }
+        // Migration from old single key
+        const oldKey = localStorage.getItem('gemini_api_key') || '';
+        return [oldKey, '', '', '', ''];
+    });
+    const [selectedGeminiIndex, setSelectedGeminiIndex] = useState(() =>
+        parseInt(localStorage.getItem('selected_gemini_index') || '0')
     );
     const [deepseekApiKey, setDeepseekApiKey] = useState(() =>
         localStorage.getItem('deepseek_api_key') || ''
@@ -118,8 +132,12 @@ function App() {
 
     // Save API keys to localStorage
     useEffect(() => {
-        localStorage.setItem('gemini_api_key', geminiApiKey);
-    }, [geminiApiKey]);
+        localStorage.setItem('gemini_api_keys', JSON.stringify(geminiApiKeys));
+    }, [geminiApiKeys]);
+
+    useEffect(() => {
+        localStorage.setItem('selected_gemini_index', selectedGeminiIndex.toString());
+    }, [selectedGeminiIndex]);
 
     useEffect(() => {
         localStorage.setItem('deepseek_api_key', deepseekApiKey);
@@ -247,7 +265,11 @@ function App() {
     // Fetch data and analyze
     const handleAnalyze = async () => {
         const groqApiKey = groqApiKeys[selectedGroqIndex];
-        const currentApiKey = aiProvider === 'gemini' ? geminiApiKey : aiProvider === 'deepseek' ? deepseekApiKey : groqApiKey;
+        const currentApiKey = aiProvider === 'gemini'
+            ? geminiApiKeys[selectedGeminiIndex]
+            : aiProvider === 'deepseek'
+                ? deepseekApiKey
+                : groqApiKeys[selectedGroqIndex];
         const providerName = aiProvider === 'gemini' ? 'Gemini' : aiProvider === 'deepseek' ? 'DeepSeek' : 'Groq';
 
         if (!currentApiKey) {
@@ -272,7 +294,7 @@ function App() {
             // Then analyze using selected provider with trade duration
             let result;
             if (aiProvider === 'gemini') {
-                result = await analyzeGemini(geminiApiKey, selectedSymbol, data, tradeDuration);
+                result = await analyzeGemini(geminiApiKeys[selectedGeminiIndex], selectedSymbol, data, tradeDuration);
             } else if (aiProvider === 'deepseek') {
                 result = await analyzeDeepSeek(deepseekApiKey, selectedSymbol, data, tradeDuration);
             } else {
@@ -387,12 +409,12 @@ function App() {
                                     >
                                         🔮 Gemini
                                     </button>
-                                    <button
+                                    {/* <button
                                         className={`lang-btn ${aiProvider === 'deepseek' ? 'active' : ''}`}
                                         onClick={() => setAiProvider('deepseek')}
                                     >
                                         🐋 DeepSeek
-                                    </button>
+                                    </button> */}
                                     <button
                                         className={`lang-btn ${aiProvider === 'groq' ? 'active' : ''}`}
                                         onClick={() => setAiProvider('groq')}
@@ -401,6 +423,36 @@ function App() {
                                     </button>
                                 </div>
                             </div>
+
+                            {/* Gemini Slot Selector */}
+                            {aiProvider === 'gemini' && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '4px' }}>
+                                    <span style={{ fontSize: '0.7rem', color: '#7a7a85' }}>Slot:</span>
+                                    <div style={{ display: 'flex', gap: '4px' }}>
+                                        {[0, 1, 2, 3, 4].map((idx) => (
+                                            <button
+                                                key={idx}
+                                                onClick={() => setSelectedGeminiIndex(idx)}
+                                                style={{
+                                                    width: '24px',
+                                                    height: '24px',
+                                                    borderRadius: '4px',
+                                                    border: '1px solid',
+                                                    borderColor: selectedGeminiIndex === idx ? '#f5a623' : '#3a3a45',
+                                                    background: selectedGeminiIndex === idx ? 'rgba(245, 166, 35, 0.1)' : '#1a1a20',
+                                                    color: selectedGeminiIndex === idx ? '#f5a623' : '#a0a0a8',
+                                                    fontSize: '0.7rem',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s',
+                                                    fontWeight: 'bold'
+                                                }}
+                                            >
+                                                {idx + 1}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Groq Slot Selector */}
                             {aiProvider === 'groq' && (
@@ -439,15 +491,19 @@ function App() {
                                 <input
                                     type={showApiKey ? 'text' : 'password'}
                                     className="form-input"
-                                    placeholder="Enter Gemini API Key (AIza...)"
-                                    value={geminiApiKey}
-                                    onChange={(e) => setGeminiApiKey(e.target.value)}
+                                    placeholder={`Enter Gemini API Key Slot ${selectedGeminiIndex + 1} (AIza...)`}
+                                    value={geminiApiKeys[selectedGeminiIndex]}
+                                    onChange={(e) => {
+                                        const newKeys = [...geminiApiKeys];
+                                        newKeys[selectedGeminiIndex] = e.target.value;
+                                        setGeminiApiKeys(newKeys);
+                                    }}
                                     onFocus={() => setShowApiKey(true)}
                                     onBlur={() => setShowApiKey(false)}
                                     title="Click Analyze to see current key state"
                                 />
                                 <div className="form-hint">
-                                    <span>💾 Saved locally</span>
+                                    <span>💎 Slot {selectedGeminiIndex + 1} Selected</span>
                                     <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">
                                         Get Gemini Key
                                     </a>
@@ -597,7 +653,7 @@ function App() {
                     <button
                         className="btn-gold"
                         onClick={handleAnalyze}
-                        disabled={loading || analyzing || cooldown > 0 || !itickToken || !(geminiApiKey || deepseekApiKey || groqApiKeys[selectedGroqIndex])}
+                        disabled={loading || analyzing || cooldown > 0 || !itickToken || !(geminiApiKeys[selectedGeminiIndex] || deepseekApiKey || groqApiKeys[selectedGroqIndex])}
                     >
                         {loading || analyzing ? (
                             <span className="loading-text">
