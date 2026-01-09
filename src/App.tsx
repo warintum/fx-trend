@@ -588,7 +588,7 @@ function App() {
                         {loading && (
                             <div className="cooldown-bar">
                                 <span className="spinner"></span>
-                                <span>↻ vo (Cooldown) - 0m 20s</span>
+                                <span>↻</span>
                             </div>
                         )}
                     </div>
@@ -606,7 +606,7 @@ function App() {
                             </span>
                         ) : cooldown > 0 ? (
                             <span className="loading-text">
-                                ⏳ รอคูลดาวน์ ({cooldown}s)
+                                ↻ รอ Cooldown -- {cooldown}s
                             </span>
                         ) : (
                             <>⚡ เริ่มวิเคราะห์</>
@@ -638,9 +638,9 @@ function App() {
                                     <div className="ai-analysis-content-premium">
                                         <p>
                                             {analysisResult.signal.reasoning
-                                                .split(/(\d+[\)\.]) /g)
+                                                .split(/(\d+[\)]) /g)
                                                 .map((part, i) => {
-                                                    if (part.match(/^\d+[\)\.]$/)) {
+                                                    if (part.match(/^\d+[\)]$/)) {
                                                         return (
                                                             <span key={i} className="ai-number-highlight">
                                                                 {i > 0 ? '\n' : ''}{part}{' '}
