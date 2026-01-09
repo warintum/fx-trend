@@ -152,15 +152,15 @@ function parseAnalysisResponse(responseText: string): AnalysisResult {
             const sup = parsed.keyLevels?.support || [];
             const res = parsed.keyLevels?.resistance || [];
 
-            // If Entry is 0 but we are waiting/trading, pick from zones
-            if (s.entryPrice === 0) {
+            // If Entry is 0 or null but we are waiting/trading, pick from zones
+            if (!s.entryPrice) {
                 if (s.type.includes('BUY') && sup.length > 0) s.entryPrice = sup[0];
                 else if (s.type.includes('SELL') && res.length > 0) s.entryPrice = res[0];
                 else s.entryPrice = parsed.currentPrice;
             }
 
-            // If SL is 0, calculate a safe distance
-            if (s.stopLoss === 0 && s.entryPrice > 0) {
+            // If SL is 0 or null, calculate a safe distance
+            if (!s.stopLoss && s.entryPrice > 0) {
                 const distance = s.entryPrice * 0.005; // 0.5% default if unknown
                 if (s.type.includes('BUY')) {
                     s.stopLoss = sup.length > 1 ? sup[1] : s.entryPrice - distance;
@@ -169,8 +169,8 @@ function parseAnalysisResponse(responseText: string): AnalysisResult {
                 }
             }
 
-            // If TP is 0, calculate 1:1.5 RR
-            if (s.takeProfit === 0 && s.entryPrice > 0 && s.stopLoss > 0) {
+            // If TP is 0 or null, calculate 1:1.5 RR
+            if (!s.takeProfit && s.entryPrice > 0 && s.stopLoss > 0) {
                 const risk = Math.abs(s.entryPrice - s.stopLoss);
                 if (s.type.includes('BUY')) s.takeProfit = s.entryPrice + (risk * 1.5);
                 else s.takeProfit = s.entryPrice - (risk * 1.5);

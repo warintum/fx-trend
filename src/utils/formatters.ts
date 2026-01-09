@@ -1,7 +1,8 @@
-export function formatPrice(price: number | string, decimals: number = 2): string {
+export function formatPrice(price: number | string | null | undefined, decimals: number = 2): string {
+    if (price === null || price === undefined || price === '') return '-';
     const num = typeof price === 'string' ? parseFloat(price) : price;
-    if (isNaN(num)) return '-';
-    return num.toFixed(decimals);
+    if (isNaN(num as number) || num === null) return '-';
+    return (num as number).toFixed(decimals);
 }
 
 export function formatTimestamp(timestamp: number): string {
