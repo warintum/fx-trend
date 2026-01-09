@@ -144,7 +144,7 @@ export async function getMultiTimeframeData(
     return {
         M5: m5Data,
         M30: m30Data,
-        H1: h1Data.slice(0, 100), // Keep only latest 100
+        H1: h1Data.slice(-100), // Keep only latest 100
         H4: h4Data,
     };
 }

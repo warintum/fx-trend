@@ -146,36 +146,8 @@ function parseAnalysisResponse(responseText: string): AnalysisResult {
     try {
         const parsed = JSON.parse(jsonStr) as AnalysisResult;
 
-        // --- Self-Healing: Fix Zero Values for Entry/SL/TP ---
-        if (parsed.signal) {
-            const s = parsed.signal;
-            const sup = parsed.keyLevels?.support || [];
-            const res = parsed.keyLevels?.resistance || [];
-
-            // If Entry is 0 or null but we are waiting/trading, pick from zones
-            if (!s.entryPrice) {
-                if (s.type.includes('BUY') && sup.length > 0) s.entryPrice = sup[0];
-                else if (s.type.includes('SELL') && res.length > 0) s.entryPrice = res[0];
-                else s.entryPrice = parsed.currentPrice;
-            }
-
-            // If SL is 0 or null, calculate a safe distance
-            if (!s.stopLoss && s.entryPrice > 0) {
-                const distance = s.entryPrice * 0.005; // 0.5% default if unknown
-                if (s.type.includes('BUY')) {
-                    s.stopLoss = sup.length > 1 ? sup[1] : s.entryPrice - distance;
-                } else {
-                    s.stopLoss = res.length > 1 ? res[1] : s.entryPrice + distance;
-                }
-            }
-
-            // If TP is 0 or null, calculate 1:1.5 RR
-            if (!s.takeProfit && s.entryPrice > 0 && s.stopLoss > 0) {
-                const risk = Math.abs(s.entryPrice - s.stopLoss);
-                if (s.type.includes('BUY')) s.takeProfit = s.entryPrice + (risk * 1.5);
-                else s.takeProfit = s.entryPrice - (risk * 1.5);
-            }
-        }
+        // Note: Automatic fallback calculation for 0/null prices has been removed 
+        // per user request. Formatter will show '-' instead.
 
         console.log('[Gemini] Parsed and Fixed successfully:', parsed);
         return parsed;

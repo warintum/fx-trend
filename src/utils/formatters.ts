@@ -1,7 +1,7 @@
 export function formatPrice(price: number | string | null | undefined, decimals: number = 2): string {
-    if (price === null || price === undefined || price === '') return '-';
+    if (price === null || price === undefined || price === '' || price === 0) return '-';
     const num = typeof price === 'string' ? parseFloat(price) : price;
-    if (isNaN(num as number) || num === null) return '-';
+    if (isNaN(num as number) || num === null || num === 0) return '-';
     return (num as number).toFixed(decimals);
 }
 
