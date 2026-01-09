@@ -23,6 +23,7 @@ export interface Signal {
     takeProfit: number;
     confidence: number;
     reasoning: string;
+    summary?: string;
 }
 
 export interface AnalysisResult {

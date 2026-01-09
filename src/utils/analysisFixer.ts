@@ -13,7 +13,8 @@ export function sanitizeAnalysisResult(result: AnalysisResult): AnalysisResult {
         resistance: sanitizePriceArray(result.keyLevels.resistance, currentPrice),
     };
 
-    return sanitized;
+    // Smart Signal Correction (Fix Hallucinations)
+    return correctSignalDirection(sanitized);
 }
 
 /**
@@ -80,13 +81,88 @@ function sanitizePriceArray(prices: number[], currentPrice: number): number[] {
     }
 
     // Ensure p1 is higher than p2 for Demand? or strict sorting?
-    // Usually UI expects [high, low] or [low, high]. 
-    // Let's just sort descending for consistency if that's what UI expects?
-    // Actually the UI usually does `formatPrice(price1)-formatPrice(price2)`.
-    // Let's sort descending (Higher - Lower) to avoid confusion, 
-    // OR just leave as is if the AI had specific intent (but identical means no intent).
     // Let's sort descending so it's always "Top - Bottom".
     result.sort((a, b) => b - a);
 
     return result;
+}
+
+/**
+ * Smart Signal Correction:
+ * Determines if the signal type matches the entry location (Zone).
+ * If Entry is near Support -> Should be BUY.
+ * If Entry is near Resistance -> Should be SELL.
+ */
+function correctSignalDirection(result: AnalysisResult): AnalysisResult {
+    const { signal, keyLevels, currentPrice } = result;
+    const { entryPrice } = signal;
+    const { support, resistance } = keyLevels;
+
+    if (!entryPrice || !support.length || !resistance.length) return result;
+
+    // Calculate average price of zones
+    const avgSupport = support.reduce((a, b) => a + b, 0) / support.length;
+    const avgResistance = resistance.reduce((a, b) => a + b, 0) / resistance.length;
+
+    // Distances
+    const distToSupport = Math.abs(entryPrice - avgSupport);
+    const distToResistance = Math.abs(entryPrice - avgResistance);
+
+    let correctedType = signal.type;
+
+    // If significantly closer to Support than Resistance -> Bias BUY
+    if (distToSupport < distToResistance * 0.5) {
+        correctedType = 'BUY';
+    }
+    // If significantly closer to Resistance than Support -> Bias SELL
+    else if (distToResistance < distToSupport * 0.5) {
+        correctedType = 'SELL';
+    }
+    // If ambiguous, trust the original OR check against current price location
+    // (e.g. if below current price significantly -> Buy Limit?)
+    else {
+        // Fallback: If AI says "WAIT", guess based on relative position
+        if (signal.type === 'WAIT') {
+            if (entryPrice < currentPrice) correctedType = 'BUY'; // Buy Dip / Buy Limit
+            else correctedType = 'SELL'; // Sell Rally / Sell Limit
+        }
+    }
+
+    // Force correction if different
+    if (correctedType !== signal.type) {
+        console.log(`[SmartFixer] Corrected Signal Type from ${signal.type} to ${correctedType}`);
+        signal.type = correctedType as 'BUY' | 'SELL' | 'WAIT';
+    }
+
+    // --- 2. Fix SL/TP if they are "Distance" (e.g. 10.0) instead of "Price" ---
+    // Heuristic: If SL/TP is very small relative to Entry Price (e.g. < 5%), assume it's distance/pips
+    // Unless Entry Price itself is small (e.g. EURUSD 1.10), but 10.0 is huge for EURUSD.
+    // Let's assume this logic applies mainly to high-value assets like Gold/BTC or if the value is explicitly uniform (10, 20).
+    const isSmallSL = signal.stopLoss < entryPrice * 0.1;
+    const isSmallTP = signal.takeProfit < entryPrice * 0.1;
+
+    if (isSmallSL && signal.stopLoss > 0) {
+        // Convert Distance to Price
+        if (signal.type === 'BUY' || (signal.type === 'WAIT' && correctedType === 'BUY')) {
+            signal.stopLoss = entryPrice - signal.stopLoss;
+        } else {
+            signal.stopLoss = entryPrice + signal.stopLoss;
+        }
+        console.log(`[SmartFixer] Converted SL Distance to Price: ${signal.stopLoss}`);
+    }
+
+    if (isSmallTP && signal.takeProfit > 0) {
+        // Convert Distance to Price
+        if (signal.type === 'BUY' || (signal.type === 'WAIT' && correctedType === 'BUY')) {
+            signal.takeProfit = entryPrice + signal.takeProfit;
+        } else {
+            signal.takeProfit = entryPrice - signal.takeProfit;
+        }
+        console.log(`[SmartFixer] Converted TP Distance to Price: ${signal.takeProfit}`);
+    }
+
+    return {
+        ...result,
+        signal
+    };
 }

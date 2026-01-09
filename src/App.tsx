@@ -649,9 +649,23 @@ function App() {
                                                     }
                                                     return <span key={i}>{part}</span>;
                                                 })}
+                                            {(analysisResult.summary || analysisResult.signal.summary) && (
+                                                <>
+                                                    {'\n'}<span className="ai-number-highlight">สรุป:</span>{' '}
+                                                    <span>{analysisResult.summary || analysisResult.signal.summary}</span>
+                                                </>
+                                            )}
                                         </p>
                                     </div>
                                 </div>
+
+                                {/* 1.5 Analysis Summary (New) */}
+                                {analysisResult.signal.summary && (
+                                    <div className="summary-box-premium">
+                                        <div className="summary-label-premium">📌 สรุปแผนเทรด</div>
+                                        <div className="summary-text-premium">{analysisResult.signal.summary}</div>
+                                    </div>
+                                )}
 
                                 {/* 2. Result Header with COPY button */}
                                 <div className="result-header-row-premium">
@@ -708,7 +722,7 @@ function App() {
                                     <div className="card-content-premium">
                                         <span className="card-value-premium">
                                             {analysisResult.signal.type === 'WAIT'
-                                                ? `Wait ${analysisResult.trend === 'BULLISH' ? 'BUY' : 'SELL'} Limit at ${formatPrice(analysisResult.signal.entryPrice)}`
+                                                ? `Wait ${analysisResult.signal.entryPrice < (analysisResult.currentPrice || 0) ? 'BUY' : 'SELL'} Limit at ${formatPrice(analysisResult.signal.entryPrice)}`
                                                 : `${analysisResult.signal.type} at ${formatPrice(analysisResult.signal.entryPrice)}`}
                                         </span>
                                         <span className="card-icon-premium">🗺️</span>
@@ -765,10 +779,10 @@ function App() {
                         )}
                     </div>
                 </div>
-            </main>
+            </main >
 
             {/* Footer */}
-            <footer className="footer">
+            < footer className="footer" >
                 <p>
                     Built with ❤️ using{' '}
                     <a href="https://itick.org" target="_blank" rel="noopener noreferrer">iTick API</a>
@@ -778,7 +792,7 @@ function App() {
                     <a href="https://console.groq.com" target="_blank" rel="noopener noreferrer">Groq AI</a>
                     {' • '}© 2026 FX Trend Analyzer • Not financial advice
                 </p>
-            </footer>
+            </footer >
         </>
     );
 }

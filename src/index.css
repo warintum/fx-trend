@@ -1335,6 +1335,49 @@ body {
   color: #e74c3c;
 }
 
+/* === Analysis Summary Box === */
+.summary-box-premium {
+  background: rgba(255, 235, 59, 0.05);
+  border: 1px dashed rgba(255, 235, 59, 0.3);
+  border-radius: 12px;
+  padding: 14px;
+  margin: 15px 0;
+  position: relative;
+  overflow: hidden;
+  animation: fadeInSlideUp 0.6s ease-out;
+}
+
+.summary-label-premium {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #ffeb3b;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.summary-text-premium {
+  font-size: 0.92rem;
+  color: #f0f0f0;
+  line-height: 1.55;
+  font-weight: 500;
+}
+
+@keyframes fadeInSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Responsive Tweaks */
 @media (max-width: 768px) {
 
