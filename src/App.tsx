@@ -312,12 +312,8 @@ function App() {
                 result = await analyzeGroq(groqApiKeys[selectedGroqIndex], selectedSymbol, data, tradeDuration);
             }
 
-            // Calculate Technical H1 Trend to enforce consistency
-            const h1Consensus = getTechnicalConsensus(data.H1);
-            const technicalTrend = h1Consensus.trend;
-
-            // Sanitize the result to fix fused numbers or other AI quirks, and enforce trend
-            const sanitizedResult = sanitizeAnalysisResult(result, technicalTrend);
+            // Sanitize the result (e.g., fix fused numbers) without trend enforcement
+            const sanitizedResult = sanitizeAnalysisResult(result);
             setAnalysisResult(sanitizedResult);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
