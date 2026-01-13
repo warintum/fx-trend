@@ -119,7 +119,7 @@ export async function getMultiTimeframeData(
     symbol: string,
     region: string = 'GB',
     category: string = 'forex'
-): Promise<{ M5: KlineData[]; M30: KlineData[]; H1: KlineData[]; H4: KlineData[] }> {
+): Promise<{ M5: KlineData[]; M15: KlineData[]; M30: KlineData[]; H1: KlineData[]; H4: KlineData[]; D1: KlineData[] }> {
     // Fetch all timeframes with delay to respect rate limit (5 calls/min)
     const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -127,15 +127,23 @@ export async function getMultiTimeframeData(
 
     const m5Data = await fetchKlineData(token, symbol, KTYPE_MAP.M5, 100, region, category);
     console.log('[iTick API] M5 data:', m5Data.length, 'candles');
-    await delay(500); // Slightly longer delay to be safe
+    await delay(300);
+
+    const m15Data = await fetchKlineData(token, symbol, KTYPE_MAP.M15, 100, region, category);
+    console.log('[iTick API] M15 data:', m15Data.length, 'candles');
+    await delay(300);
 
     const m30Data = await fetchKlineData(token, symbol, KTYPE_MAP.M30, 100, region, category);
     console.log('[iTick API] M30 data:', m30Data.length, 'candles');
-    await delay(500);
+    await delay(300);
 
     // Fetch more H1 data to aggregate into H4 (need 4x more for same number of H4 candles)
     const h1Data = await fetchKlineData(token, symbol, KTYPE_MAP.H1, 200, region, category);
     console.log('[iTick API] H1 data:', h1Data.length, 'candles');
+    await delay(300);
+
+    const d1Data = await fetchKlineData(token, symbol, KTYPE_MAP.D1, 100, region, category);
+    console.log('[iTick API] D1 data:', d1Data.length, 'candles');
 
     // Aggregate H1 to H4
     const h4Data = aggregateToH4(h1Data);
@@ -143,8 +151,10 @@ export async function getMultiTimeframeData(
 
     return {
         M5: m5Data,
+        M15: m15Data,
         M30: m30Data,
         H1: h1Data.slice(-100), // Keep only latest 100
         H4: h4Data,
+        D1: d1Data,
     };
 }

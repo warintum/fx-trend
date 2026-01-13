@@ -9,9 +9,11 @@ export interface KlineData {
 
 export interface TimeframeData {
     M5: KlineData[];
+    M15: KlineData[];
     M30: KlineData[];
     H1: KlineData[];
     H4: KlineData[]; // Aggregated from H1
+    D1: KlineData[];
 }
 
 export type Timeframe = keyof TimeframeData;

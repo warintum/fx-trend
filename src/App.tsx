@@ -5,6 +5,7 @@ import {
     AnalysisResult,
     SYMBOLS,
     Timeframe,
+    TimeframeData,
 } from './types';
 import { getMultiTimeframeData } from './services/itickApi';
 import { analyzeMarket as analyzeGemini } from './services/geminiApi';
@@ -15,12 +16,6 @@ import { getTechnicalConsensus } from './utils/technicalIndicators';
 import { formatPrice } from './utils/formatters';
 import './index.css';
 
-type TimeframeData = {
-    M5: KlineData[];
-    M30: KlineData[];
-    H1: KlineData[];
-    H4: KlineData[];
-};
 
 function App() {
     // State
@@ -330,6 +325,42 @@ function App() {
         }
     };
 
+    // Refresh chart only (no AI analysis)
+    const handleRefreshChart = async () => {
+        if (!itickToken) {
+            setError('กรุณาใส่ iTick Token');
+            return;
+        }
+
+        setLoading(true);
+        setError(null);
+
+        try {
+            const symbolInfo = SYMBOLS.find(s => s.code === selectedSymbol);
+            const region = symbolInfo?.region || 'GB';
+            const category = (symbolInfo as any)?.category || 'forex';
+
+            const data = await getMultiTimeframeData(itickToken, selectedSymbol, region, category);
+
+            if (!data.M5 || data.M5.length === 0) {
+                throw new Error('ไม่พบข้อมูลกราฟของสินทรัพย์นี้ในขณะนี้ (อาจเป็นช่วงตลาดปิด)');
+            }
+
+            setKlineData(data);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
+        } finally {
+            setLoading(false);
+
+            // Set cooldown until next minute boundary
+            const now = new Date();
+            const secondsUntilNextMinute = 60 - now.getSeconds();
+            const endTime = Date.now() + secondsUntilNextMinute * 1000;
+            localStorage.setItem('cooldown_end_time', endTime.toString());
+            setCooldown(secondsUntilNextMinute);
+        }
+    };
+
     // Copy signal
     const handleCopySignal = () => {
         if (!analysisResult?.signal) return;
@@ -351,9 +382,11 @@ function App() {
 
     const tabs: { id: Timeframe, label: string }[] = [
         { id: 'M5', label: 'M5' },
+        { id: 'M15', label: 'M15' },
         { id: 'M30', label: 'M30' },
         { id: 'H1', label: 'H1' },
         { id: 'H4', label: 'H4' },
+        { id: 'D1', label: 'D1' },
     ];
 
     return (
@@ -597,9 +630,19 @@ function App() {
 
                     {/* Chart Selection */}
                     <div className="card">
-                        <div className="card-header">
-                            <span className="card-icon">📊</span>
-                            <span className="card-title">:: เลือกกราฟ ::</span>
+                        <div className="card-header" style={{ justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span className="card-icon">📊</span>
+                                <span className="card-title">:: เลือกกราฟ ::</span>
+                            </div>
+                            <button
+                                className="refresh-header-btn"
+                                onClick={handleRefreshChart}
+                                disabled={loading || cooldown > 0 || !itickToken}
+                                title="รีเฟรชกราฟ"
+                            >
+                                {loading ? '↻' : cooldown > 0 ? `↻ ${cooldown}s` : '🔄 รีเฟรช'}
+                            </button>
                         </div>
 
                         {/* Trade Duration Toggle */}

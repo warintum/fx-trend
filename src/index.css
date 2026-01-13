@@ -389,6 +389,32 @@ body::after {
   letter-spacing: 1.5px;
 }
 
+/* Refresh Button in Header */
+.refresh-header-btn {
+  padding: 6px 14px;
+  background: rgba(0, 229, 255, 0.1);
+  border: 1px solid var(--neon-cyan);
+  border-radius: var(--radius-md);
+  color: var(--neon-cyan);
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: var(--font-cyber);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.refresh-header-btn:hover:not(:disabled) {
+  background: rgba(0, 229, 255, 0.2);
+  box-shadow: 0 0 15px rgba(0, 229, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.refresh-header-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* ========================================
    FORM CONTROLS - CYBER STYLE
    ======================================== */
@@ -499,6 +525,25 @@ body::after {
   color: var(--neon-blue);
   font-weight: 700;
   box-shadow: 0 0 15px rgba(0, 170, 255, 0.3);
+}
+
+.tf-tab.refresh-btn {
+  margin-left: auto;
+  background: rgba(0, 170, 255, 0.05);
+  border-color: var(--neon-cyan);
+  color: var(--neon-cyan);
+}
+
+.tf-tab.refresh-btn:hover:not(:disabled) {
+  background: rgba(0, 229, 255, 0.15);
+  border-color: var(--neon-cyan);
+  color: var(--neon-cyan);
+  box-shadow: 0 0 15px rgba(0, 229, 255, 0.3);
+}
+
+.tf-tab.refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* ========================================
@@ -1226,9 +1271,16 @@ body::after {
   }
 
   .tf-tabs {
-    overflow-x: auto;
-    flex-wrap: nowrap;
-    padding-bottom: var(--spacing-xs);
+    gap: 4px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .tf-tab {
+    padding: 8px 12px;
+    font-size: 0.7rem;
+    letter-spacing: 0.5px;
+    flex: 0 0 auto;
   }
 
   .signal-action-row {
