@@ -431,9 +431,9 @@ function App() {
                                                         height: '24px',
                                                         borderRadius: '4px',
                                                         border: '1px solid',
-                                                        borderColor: selectedGeminiIndex === idx ? '#f5a623' : '#3a3a45',
-                                                        background: selectedGeminiIndex === idx ? 'rgba(245, 166, 35, 0.1)' : '#1a1a20',
-                                                        color: selectedGeminiIndex === idx ? '#f5a623' : '#a0a0a8',
+                                                        borderColor: selectedGeminiIndex === idx ? '#00aaff' : '#3a3a45',
+                                                        background: selectedGeminiIndex === idx ? 'rgba(0, 170, 255, 0.1)' : '#1a1a20',
+                                                        color: selectedGeminiIndex === idx ? '#00aaff' : '#a0a0a8',
                                                         fontSize: '0.7rem',
                                                         cursor: 'pointer',
                                                         transition: 'all 0.2s',
@@ -456,9 +456,9 @@ function App() {
                                                         padding: '2px 6px',
                                                         borderRadius: '4px',
                                                         border: '1px solid',
-                                                        borderColor: geminiVersion === v ? '#f5a623' : '#3a3a45',
-                                                        background: geminiVersion === v ? 'rgba(245, 166, 35, 0.1)' : '#1a1a20',
-                                                        color: geminiVersion === v ? '#f5a623' : '#a0a0a8',
+                                                        borderColor: geminiVersion === v ? '#00aaff' : '#3a3a45',
+                                                        background: geminiVersion === v ? 'rgba(0, 170, 255, 0.1)' : '#1a1a20',
+                                                        color: geminiVersion === v ? '#00aaff' : '#a0a0a8',
                                                         fontSize: '0.65rem',
                                                         cursor: 'pointer',
                                                         transition: 'all 0.2s',
@@ -487,9 +487,9 @@ function App() {
                                                     height: '24px',
                                                     borderRadius: '4px',
                                                     border: '1px solid',
-                                                    borderColor: selectedGroqIndex === idx ? '#f5a623' : '#3a3a45',
-                                                    background: selectedGroqIndex === idx ? 'rgba(245, 166, 35, 0.1)' : '#1a1a20',
-                                                    color: selectedGroqIndex === idx ? '#f5a623' : '#a0a0a8',
+                                                    borderColor: selectedGroqIndex === idx ? '#00aaff' : '#3a3a45',
+                                                    background: selectedGroqIndex === idx ? 'rgba(0, 170, 255, 0.1)' : '#1a1a20',
+                                                    color: selectedGroqIndex === idx ? '#00aaff' : '#a0a0a8',
                                                     fontSize: '0.7rem',
                                                     cursor: 'pointer',
                                                     transition: 'all 0.2s',
@@ -654,12 +654,12 @@ function App() {
                         )}
 
                         {/* Cooldown */}
-                        {loading && (
+                        {/*loading && (
                             <div className="cooldown-bar">
                                 <span className="spinner"></span>
                                 <span>↻</span>
                             </div>
-                        )}
+                        )*/}
                     </div>
 
                     {/* Analyze Button */}
