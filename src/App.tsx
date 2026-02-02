@@ -8,6 +8,7 @@ import {
     TimeframeData,
 } from './types';
 import { getMultiTimeframeData } from './services/itickApi';
+import { getBinanceMultiTimeframeData } from './services/binanceApi';
 import { analyzeMarket as analyzeGemini } from './services/geminiApi';
 import { analyzeMarketWithDeepSeek as analyzeDeepSeek } from './services/deepseekApi';
 import { analyzeMarketWithGroq as analyzeGroq } from './services/groqApi';
@@ -70,6 +71,9 @@ function App() {
     );
     const [selectedTimeframe, setSelectedTimeframe] = useState<Timeframe>(() =>
         (localStorage.getItem('selected_timeframe') as Timeframe) || 'H4'
+    );
+    const [dataSource, setDataSource] = useState<'itick' | 'binance'>(() =>
+        (localStorage.getItem('data_source') as 'itick' | 'binance') || 'binance'
     );
     const [klineData, setKlineData] = useState<TimeframeData | null>(null);
     const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(() => {
@@ -165,6 +169,10 @@ function App() {
     useEffect(() => {
         localStorage.setItem('selected_timeframe', selectedTimeframe);
     }, [selectedTimeframe]);
+
+    useEffect(() => {
+        localStorage.setItem('data_source', dataSource);
+    }, [dataSource]);
 
     useEffect(() => {
         if (analysisResult) {
@@ -271,7 +279,7 @@ function App() {
             setError(`กรุณาใส่ ${providerName} API Key`);
             return;
         }
-        if (!itickToken) {
+        if (dataSource === 'itick' && !itickToken) {
             setError('กรุณาใส่ iTick Token');
             return;
         }
@@ -288,7 +296,20 @@ function App() {
             const category = (symbolInfo as any)?.category || 'forex';
 
             // Fetch data first
-            const data = await getMultiTimeframeData(itickToken, selectedSymbol, region, category);
+            let data: TimeframeData;
+            if (dataSource === 'binance') {
+                try {
+                    data = await getBinanceMultiTimeframeData(selectedSymbol);
+                } catch (e) {
+                    // Check if error is related to unsupported symbol
+                    if (['SPX', 'NDX', 'AAPL$US', 'TSLA$US'].includes(selectedSymbol)) {
+                        throw new Error(`Binance ไม่รองรับคู่เงิน/หุ้นนี้ (${selectedSymbol}) กรุณาใช้ iTick แทน`);
+                    }
+                    throw e;
+                }
+            } else {
+                data = await getMultiTimeframeData(itickToken, selectedSymbol, region, category);
+            }
 
             // Data Guard: if no candles returned, stop and show error
             if (!data.M5 || data.M5.length === 0) {
@@ -327,7 +348,7 @@ function App() {
 
     // Refresh chart only (no AI analysis)
     const handleRefreshChart = async () => {
-        if (!itickToken) {
+        if (dataSource === 'itick' && !itickToken) {
             setError('กรุณาใส่ iTick Token');
             return;
         }
@@ -340,7 +361,19 @@ function App() {
             const region = symbolInfo?.region || 'GB';
             const category = (symbolInfo as any)?.category || 'forex';
 
-            const data = await getMultiTimeframeData(itickToken, selectedSymbol, region, category);
+            let data: TimeframeData;
+            if (dataSource === 'binance') {
+                try {
+                    data = await getBinanceMultiTimeframeData(selectedSymbol);
+                } catch (e) {
+                    if (['SPX', 'NDX', 'AAPL$US', 'TSLA$US'].includes(selectedSymbol)) {
+                        throw new Error(`Binance ไม่รองรับคู่เงิน/หุ้นนี้ (${selectedSymbol}) กรุณาใช้ iTick แทน`);
+                    }
+                    throw e;
+                }
+            } else {
+                data = await getMultiTimeframeData(itickToken, selectedSymbol, region, category);
+            }
 
             if (!data.M5 || data.M5.length === 0) {
                 throw new Error('ไม่พบข้อมูลกราฟของสินทรัพย์นี้ในขณะนี้ (อาจเป็นช่วงตลาดปิด)');
@@ -427,6 +460,32 @@ function App() {
                         <div className="card-header">
                             <span className="card-icon">🔑</span>
                             <span className="card-title">:: การตั้งค่า API ::</span>
+                        </div>
+
+                        {/* Data Source Toggle */}
+                        <div style={{ display: 'flex', flexDirection: 'column', marginBottom: '12px', gap: '8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ fontSize: '0.75rem', color: '#a0a0a8' }}>Data Source:</span>
+                                <div className="lang-toggle">
+                                    <button
+                                        className={`lang-btn ${dataSource === 'binance' ? 'active' : ''}`}
+                                        onClick={() => setDataSource('binance')}
+                                    >
+                                        🌐 Binance
+                                    </button>
+                                    <button
+                                        className={`lang-btn ${dataSource === 'itick' ? 'active' : ''}`}
+                                        onClick={() => setDataSource('itick')}
+                                    >
+                                        🕰️ iTick
+                                    </button>
+                                </div>
+                            </div>
+                            {dataSource === 'binance' && (
+                                <div style={{ fontSize: '0.7rem', color: '#22c55e', fontStyle: 'italic', paddingLeft: '4px' }}>
+                                    ✅ ฟรีตลอดชีพ (ใช้ PAXGUSDT แทน Gold)
+                                </div>
+                            )}
                         </div>
 
                         {/* AI Provider Toggle */}
@@ -610,22 +669,26 @@ function App() {
                         )}
 
                         {/* iTick Token */}
-                        <input
-                            type={showApiKey ? 'text' : 'password'}
-                            className="form-input"
-                            placeholder="Enter iTick Token..."
-                            value={itickToken}
-                            onChange={(e) => setItickToken(e.target.value)}
-                            onFocus={() => setShowApiKey(true)}
-                            onBlur={() => setShowApiKey(false)}
-                            style={{ marginTop: '12px' }}
-                        />
-                        <div className="form-hint">
-                            <span></span>
-                            <a href="https://itick.org" target="_blank" rel="noopener noreferrer">
-                                Get iTick Token
-                            </a>
-                        </div>
+                        {dataSource === 'itick' && (
+                            <>
+                                <input
+                                    type={showApiKey ? 'text' : 'password'}
+                                    className="form-input"
+                                    placeholder="Enter iTick Token..."
+                                    value={itickToken}
+                                    onChange={(e) => setItickToken(e.target.value)}
+                                    onFocus={() => setShowApiKey(true)}
+                                    onBlur={() => setShowApiKey(false)}
+                                    style={{ marginTop: '12px' }}
+                                />
+                                <div className="form-hint">
+                                    <span></span>
+                                    <a href="https://itick.org" target="_blank" rel="noopener noreferrer">
+                                        Get iTick Token
+                                    </a>
+                                </div>
+                            </>
+                        )}
                     </div>
 
                     {/* Chart Selection */}
@@ -638,7 +701,7 @@ function App() {
                             <button
                                 className="refresh-header-btn"
                                 onClick={handleRefreshChart}
-                                disabled={loading || cooldown > 0 || !itickToken}
+                                disabled={loading || cooldown > 0 || (dataSource === 'itick' && !itickToken)}
                                 title="รีเฟรชกราฟ"
                             >
                                 {loading ? '↻' : cooldown > 0 ? `↻ ${cooldown}s` : '🔄 รีเฟรช'}
@@ -695,21 +758,13 @@ function App() {
                         {klineData && (
                             <div className="chart-container" ref={chartContainerRef}></div>
                         )}
-
-                        {/* Cooldown */}
-                        {/*loading && (
-                            <div className="cooldown-bar">
-                                <span className="spinner"></span>
-                                <span>↻</span>
-                            </div>
-                        )*/}
                     </div>
 
                     {/* Analyze Button */}
                     <button
                         className="btn-gold"
                         onClick={handleAnalyze}
-                        disabled={loading || analyzing || cooldown > 0 || !itickToken || !(geminiApiKeys[selectedGeminiIndex] || deepseekApiKey || groqApiKeys[selectedGroqIndex])}
+                        disabled={loading || analyzing || cooldown > 0 || (dataSource === 'itick' && !itickToken) || !(geminiApiKeys[selectedGeminiIndex] || deepseekApiKey || groqApiKeys[selectedGroqIndex])}
                     >
                         {loading || analyzing ? (
                             <span className="loading-text">
@@ -724,6 +779,7 @@ function App() {
                             <>⚡ เริ่มวิเคราะห์</>
                         )}
                     </button>
+
                 </div>
 
                 {/* Right Panel - Results */}
