@@ -54,22 +54,26 @@ export function calculateRSI(data: number[], period: number = 14): number {
 }
 
 export function getTechnicalConsensus(data: KlineData[]): TechnicalConsensus {
-    if (data.length < 200) {
+    // Need at least 15 candles for RSI
+    if (data.length < 15) {
         return { trend: 'SIDEWAYS', rsiStatus: 'NEUTRAL', ema200: 0, rsi: 50 };
     }
 
     const closePrices = data.map(k => k.close);
     const currentPrice = closePrices[closePrices.length - 1];
 
-    // Calculate EMA 200
-    const ema200 = calculateEMA(closePrices, 200);
-
-    // Calculate RSI 14
+    // Calculate RSI 14 (needs ~15+ candles)
     const rsi = calculateRSI(closePrices, 14);
 
+    // Calculate EMA 200 (needs 200+ candles)
+    let ema200 = 0;
     let trend: 'UP' | 'DOWN' | 'SIDEWAYS' = 'SIDEWAYS';
-    if (currentPrice > ema200) trend = 'UP';
-    else if (currentPrice < ema200) trend = 'DOWN';
+
+    if (data.length >= 200) {
+        ema200 = calculateEMA(closePrices, 200);
+        if (currentPrice > ema200) trend = 'UP';
+        else if (currentPrice < ema200) trend = 'DOWN';
+    }
 
     let rsiStatus: 'OVERBOUGHT' | 'OVERSOLD' | 'NEUTRAL' = 'NEUTRAL';
     if (rsi > 70) rsiStatus = 'OVERBOUGHT';

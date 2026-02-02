@@ -31,7 +31,7 @@ const INTERVAL_MAP: Record<string, string> = {
 export async function fetchBinanceKline(
     symbol: string,
     interval: string,
-    limit: number = 100
+    limit: number = 500
 ): Promise<KlineData[]> {
     // Resolve mapped symbol
     const binanceSymbol = SYMBOL_MAP[symbol] || symbol.replace('/', ''); // Try direct map, else remove slash (e.g. BTC/USDT -> BTCUSDT)
