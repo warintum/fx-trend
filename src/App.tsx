@@ -337,12 +337,19 @@ function App() {
             setLoading(false);
             setAnalyzing(false);
 
-            // Set cooldown until next minute boundary
-            const now = new Date();
-            const secondsUntilNextMinute = 60 - now.getSeconds();
-            const endTime = Date.now() + secondsUntilNextMinute * 1000;
+            // Set cooldown
+            let secondsWait;
+            if (dataSource === 'binance') {
+                secondsWait = 10; // 10s fixed for Binance
+            } else {
+                // iTick/Others: Wait until next minute to be safe
+                const now = new Date();
+                secondsWait = 60 - now.getSeconds();
+            }
+
+            const endTime = Date.now() + secondsWait * 1000;
             localStorage.setItem('cooldown_end_time', endTime.toString());
-            setCooldown(secondsUntilNextMinute);
+            setCooldown(secondsWait);
         }
     };
 
@@ -385,12 +392,18 @@ function App() {
         } finally {
             setLoading(false);
 
-            // Set cooldown until next minute boundary
-            const now = new Date();
-            const secondsUntilNextMinute = 60 - now.getSeconds();
-            const endTime = Date.now() + secondsUntilNextMinute * 1000;
+            // Set cooldown
+            let secondsWait;
+            if (dataSource === 'binance') {
+                secondsWait = 10; // 10s fixed for Binance
+            } else {
+                const now = new Date();
+                secondsWait = 60 - now.getSeconds();
+            }
+
+            const endTime = Date.now() + secondsWait * 1000;
             localStorage.setItem('cooldown_end_time', endTime.toString());
-            setCooldown(secondsUntilNextMinute);
+            setCooldown(secondsWait);
         }
     };
 
@@ -483,7 +496,7 @@ function App() {
                             </div>
                             {dataSource === 'binance' && (
                                 <div style={{ fontSize: '0.7rem', color: '#22c55e', fontStyle: 'italic', paddingLeft: '4px' }}>
-                                    ✅ ฟรีตลอดชีพ (ใช้ PAXGUSDT แทน Gold)
+                                    ✅ ฟรีตลอดชีพ (ใช้ XAUUSDT Futures)
                                 </div>
                             )}
                         </div>

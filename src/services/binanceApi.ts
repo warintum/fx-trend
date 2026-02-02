@@ -1,18 +1,15 @@
 import { KlineData, KTYPE_MAP } from '../types';
 
-const BASE_URL = 'https://api.binance.com';
+const BASE_URL = 'https://fapi.binance.com';
 
-// Map our SYMBOLS to Binance symbols
+// Map our SYMBOLS to Binance Futures symbols
 const SYMBOL_MAP: Record<string, string> = {
-    'XAUUSD': 'PAXGUSDT', // Gold -> Pax Gold (Crypto-backed Gold)
+    'XAUUSD': 'XAUUSDT', // Gold Futures (Matches Spot Price closely)
     'EURUSD': 'EURUSDT',
     'GBPUSD': 'GBPUSDT',
-    'USDJPY': 'USDCJPY', // Very limited liquidity, might need fallback or warning. Actually checking binance pairs, usually it's stablecoins. 
-    // Better alternative for JPY might be missing on standard Binance spot. 
-    // Let's stick to major pairs. 
-    // If not found, we might need a different mapping or just fail gracefully.
+    'USDJPY': 'USDJPY',  // Binance Futures has USDJPY
     'AUDUSD': 'AUDUSDT',
-    'USDCAD': 'USDCUSDT', // Proxy? No.
+    'USDCAD': 'USDCAD',  // Binance Futures has USDCAD
     // Crypto
     'BTCUSD': 'BTCUSDT',
     'ETHUSD': 'ETHUSDT',
@@ -36,16 +33,9 @@ export async function fetchBinanceKline(
     // Resolve mapped symbol
     const binanceSymbol = SYMBOL_MAP[symbol] || symbol.replace('/', ''); // Try direct map, else remove slash (e.g. BTC/USDT -> BTCUSDT)
 
-    // Convert generic timeframe key (M5, H1) to Binance interval (5m, 1h) if needed
-    // If 'interval' comes in as '1', '2' (from KTYPE_MAP numbers), we need to handle that too, 
-    // but the caller usually passes the string representation or we control it.
-    // Based on itickApi, it takes kType (number). We need to align with that.
-
-    // Wait, let's look at how getMultiTimeframeData implementations usually work. 
-    // existing itickApi uses KTYPE_MAP keys probably? No, itick uses specific numbers.
-    // Let's check the types file again for KTYPE_MAP. 
-
-    const url = `${BASE_URL}/api/v3/klines?symbol=${binanceSymbol}&interval=${interval}&limit=${limit}`;
+    // Binance Futures API Endpoint
+    // Note: 'interval' here is already converted to Binance format (e.g. '5m') by the caller using INDERVAL_MAP
+    const url = `${BASE_URL}/fapi/v1/klines?symbol=${binanceSymbol}&interval=${interval}&limit=${limit}`;
 
     try {
         const response = await fetch(url);
