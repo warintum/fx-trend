@@ -12,6 +12,7 @@ import { getBinanceMultiTimeframeData } from './services/binanceApi';
 import { analyzeMarket as analyzeGemini } from './services/geminiApi';
 import { analyzeMarketWithDeepSeek as analyzeDeepSeek } from './services/deepseekApi';
 import { analyzeMarketWithGroq as analyzeGroq } from './services/groqApi';
+
 import { sanitizeAnalysisResult } from './utils/analysisFixer';
 import { getTechnicalConsensus } from './utils/technicalIndicators';
 import { formatPrice } from './utils/formatters';
@@ -60,6 +61,7 @@ function App() {
     const [selectedGroqIndex, setSelectedGroqIndex] = useState(() =>
         parseInt(localStorage.getItem('selected_groq_index') || '0')
     );
+
     const [aiProvider, setAiProvider] = useState<'gemini' | 'deepseek' | 'groq'>(() =>
         (localStorage.getItem('ai_provider') as 'gemini' | 'deepseek' | 'groq') || 'gemini'
     );
@@ -319,7 +321,7 @@ function App() {
             setKlineData(data);
 
             // Then analyze using selected provider with trade duration
-            let result;
+            let result: AnalysisResult;
             if (aiProvider === 'gemini') {
                 result = await analyzeGemini(geminiApiKeys[selectedGeminiIndex], selectedSymbol, data, tradeDuration, geminiVersion);
             } else if (aiProvider === 'deepseek') {
